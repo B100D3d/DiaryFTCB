@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "1036718914746",
+    "firebase_url": "https://diaryforcoolestboys.firebaseio.com",
+    "project_id": "diaryforcoolestboys",
+    "storage_bucket": "diaryforcoolestboys.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1036718914746:android:a21b6e99db2d4bcb",
+        "android_client_info": {
+          "package_name": "com.devourer.alexb.diaryforthecoolestboys"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1036718914746-q9iensr0ukihqfo6p9dpfis64i9a2seo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.devourer.alexb.diaryforthecoolestboys",
+            "certificate_hash": "76b95b2739177d553e7f3f291e7238876bb9080a"
+          }
+        },
+        {
+          "client_id": "1036718914746-7o0bvut8o57tp0pu31rr4ufks0n8p4qi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBYmRo062fC2dqI4IUiEvLOqYQTIiSK2MU"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1036718914746-7o0bvut8o57tp0pu31rr4ufks0n8p4qi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

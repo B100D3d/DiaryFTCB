@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+            android:title="Settings"
+            android:checkable="false"/>
+    <item
+            android:id="@+id/delete_list"
+            android:title="Delete current list"
+            android:checkable="false"/>
+    <item
+            android:id="@+id/delete_completed_tasks"
+            android:title="Delete all completed tasks"
+            android:checkable="false"/>
+    <group>
+        <item android:title="About app">
+            <menu>
+                <item android:title="Click"/>
+            </menu>
+        </item>
+    </group>
+    <group>
+        <item android:title="And something more"/>
+    </group>
+</menu>

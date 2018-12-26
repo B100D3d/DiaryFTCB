@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#7c4dff</color>
+    <color name="colorPrimaryDark">#000000</color>
+    <color name="colorAccent">#7c4dff</color>
+    <color name="colorBottomAppBar">#101010</color>
+    <color name="colorLoginStatusBar">#201e28</color>
+    <color name="colorMain">#201e28</color>
+    <color name="colorNavBar">#1a191e</color>
+    <color name="colorCheckedItemText">#5f26ff</color>
+    <color name="colorItemText">#FFFFFF</color>
+    <color name="colorEmailText">#817e7e</color>
+    <color name="colorBackSnackbar">#1d1c1c</color>
+    <color name="colorOkActionSnackbar">#FF1A6013</color>
+    <color name="colorErrorActionBar">#FFC41520</color>
+    <color name="colorUNDOActionSnackbar">#7c4dff</color>
+    <color name="colorBackItem">#147c4dff</color>
+    <color name="colorLogOut">#c4001d</color>
+    //4688f5
+</resources>

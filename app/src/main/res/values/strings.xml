@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">DiaryFTCB</string>
+    <string name="settings_menu">Settings</string>
+    <string name="delete_menu_title">delete_menu</string>
+    <string name="back_menu_title">back_menu</string>
+    <string name="my_tasks_title">My Tasks</string>
+    <string name="create_new_list_title">Create new list</string>
+    <string name="taskEditTextHint">Enter task\'s text</string>
+    <string name="add_date">Add date</string>
+    <string name="add_details">Add details</string>
+    <string name="enter_name_of_task_list">Enter name of task list</string>
+    <string name="enter_details">Enter details</string>
+    <string name="ok">OK</string>
+    <string name="cancel">CANCEL</string>
+    <string name="fingerprint_authentication_icon_content_description">Fingerprint authentication</string>
+    <string name="fingerprint_not_recognised">Not recognised.</string>
+    <string name="show_statistick">Show statistick</string>
+
+
+</resources>
