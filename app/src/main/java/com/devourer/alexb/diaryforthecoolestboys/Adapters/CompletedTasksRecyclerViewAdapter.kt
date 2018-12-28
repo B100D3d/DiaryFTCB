@@ -27,13 +27,15 @@ class CompletedTasksRecyclerViewAdapter(
     companion object {
         private const val TAG: String = "Main"
     }
+    private var isExpanded = false
     private var mCompletedTasks = ArrayList<CompletedTask>()
+    private var tempCompletedTasks = ArrayList<CompletedTask>()
     private var fire: MyFirebase = MyFirebase(mContext)
     var mSnackInterface: Snacks
     var mAdapterInterface: CompletedAdapterInterface
 
     init {
-        mCompletedTasks = _completedTasks
+        tempCompletedTasks = _completedTasks
         mAdapterInterface = _completedAdapterInterface
         mSnackInterface = _snackInterface
     }
@@ -58,7 +60,8 @@ class CompletedTasksRecyclerViewAdapter(
 
         //Log.w(TAG,"!!!!!!mTasksDate -> $mTasksDate")
         holder.taskCompletedImageLayout.setOnClickListener {
-            val completedTask = mCompletedTasks[holder.adapterPosition]
+            val position = holder.adapterPosition
+            val completedTask = mCompletedTasks[position]
             val task = Task(
                 completedTask.completedTaskText,
                 completedTask.completedTaskDetailsText,
@@ -66,8 +69,8 @@ class CompletedTasksRecyclerViewAdapter(
                 completedTask.notificationDateOfCompletedTask,
                 completedTask.id
             )
-            addTaskToNotCompleted(task, holder.adapterPosition)
-            mAdapterInterface.taskCompletedImageViewOnClick(completedTask, task)
+            addTaskToNotCompleted(task, position)
+            mAdapterInterface.taskCompletedImageViewOnClick(completedTask, task, position)
         }
 
 
@@ -90,35 +93,63 @@ class CompletedTasksRecyclerViewAdapter(
 
     }
 
-    fun addTask(task: Task, completionDate: Any?){
-        val completedTask = CompletedTask(task.taskText,task.taskDetailsText,task.dateOfTasks, completionDate, task.notificationDateOfTask, task.id)
-        mCompletedTasks.add(0, completedTask)
-        notifyItemInserted(0)
+    fun onCompletedBtn(){
+        if (!isExpanded){
+            tempCompletedTasks.forEach {
+                mCompletedTasks.add(CompletedTask(it))
+            }
+            notifyItemRangeInserted(0,tempCompletedTasks.size)
+        }
+        else{
+            val size = mCompletedTasks.size
+            mCompletedTasks.clear()
+            notifyItemRangeRemoved(0, size)
+        }
+        isExpanded = !isExpanded
     }
 
-    fun addTask(completedTask: CompletedTask){
-        mCompletedTasks.add(0,completedTask)
-        notifyItemInserted(0)
+    fun addTask(task: Task, completionDate: Any?){
+        val completedTask = CompletedTask(task.taskText,task.taskDetailsText,task.dateOfTasks, completionDate, task.notificationDateOfTask, task.id)
+        if (isExpanded) {
+            mCompletedTasks.add(0, completedTask)
+            notifyItemInserted(0)
+        }
+        tempCompletedTasks.add(0,completedTask)
+    }
+
+    fun addTask(completedTask: CompletedTask, position: Int){
+        if (isExpanded) {
+            mCompletedTasks.add(position, completedTask)
+            notifyItemInserted(position)
+        }
+        tempCompletedTasks.add(position,completedTask)
     }
 
     fun moveTaskToNotCompleted(position: Int){
-        mCompletedTasks.removeAt(position)
-        notifyItemRemoved(position)
+        tempCompletedTasks.removeAt(position)
+        if (isExpanded) {
+            mCompletedTasks.removeAt(position)
+            notifyItemRemoved(position)
+        }
 
     }
 
     private fun addTaskToNotCompleted(task: Task, position: Int){
-        mCompletedTasks.removeAt(position)
-        notifyItemRemoved(position)
+        tempCompletedTasks.removeAt(position)
+        if (isExpanded) {
+            mCompletedTasks.removeAt(position)
+            notifyItemRemoved(position)
+        }
         fire.addTaskToNotCompleted(task.map,task.id)
 
     }
 
     fun deleteAllCompletedTasks(){
         val completedTasks = ArrayList<CompletedTask>()
-        for ((i) in (0 until mCompletedTasks.size).withIndex()){
-            completedTasks.add(CompletedTask(mCompletedTasks[i]))
+        for ((i) in (0 until tempCompletedTasks.size).withIndex()){
+            completedTasks.add(CompletedTask(tempCompletedTasks[i]))
         }
+        tempCompletedTasks.clear()
         mCompletedTasks.clear()
         notifyItemRangeRemoved(0,mCompletedTasks.size)
         fire.deleteAllCompletedTasks(completedTasks)

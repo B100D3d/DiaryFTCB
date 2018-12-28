@@ -69,10 +69,11 @@ class TasksRecyclerViewAdapter(
 
         holder.taskNotCompleteImageLayout.setOnClickListener {
 
-            val task = mTasks[holder.adapterPosition]
+            val position = holder.adapterPosition
+            val task = mTasks[position]
             val completionDate = Date()
-            addTaskToCompleted(holder.adapterPosition, completionDate, mSnackInterface)
-            mAdapterInterface.taskNotCompleteImageViewOnClick(task, completionDate)
+            addTaskToCompleted(position, completionDate, mSnackInterface) // remove task from this list and add to firestore
+            mAdapterInterface.taskNotCompleteImageViewOnClick(task, completionDate, position)
 
 
         }
@@ -125,15 +126,15 @@ class TasksRecyclerViewAdapter(
 
     }
 
-    fun addTask(task: Task){
-        mTasks.add(0, task)
-        notifyItemInserted(0)
+    fun addTask(task: Task, position: Int){
+        mTasks.add(position, task)
+        notifyItemInserted(position)
         fire.addTask(task.map, task.id)
     }
 
-    fun moveTaskFromCompleted(task: Task){
-        mTasks.add(0, task)
-        notifyItemInserted(0)
+    fun moveTaskFromCompleted(task: Task, position: Int){
+        mTasks.add(position, task)
+        notifyItemInserted(position)
 
     }
 
@@ -198,7 +199,8 @@ class TasksRecyclerViewAdapter(
             task.taskDetailsText,
             task.notificationDateOfTask,
             task.id,
-            false
+            false,
+            position
         )
         fire.deleteTask(task.id)
 
