@@ -4,8 +4,8 @@ import android.app.FragmentManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Point
+import android.graphics.Rect
 import android.graphics.drawable.AnimatedVectorDrawable
-import android.graphics.drawable.VectorDrawable
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -33,7 +33,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 import java.util.concurrent.TimeUnit
 import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
-import androidx.recyclerview.widget.RecyclerView
+import androidx.core.widget.NestedScrollView
 import com.devourer.alexb.diaryforthecoolestboys.Adapters.*
 import com.devourer.alexb.diaryforthecoolestboys.FingerprintLibrary.FingerprintDialogBuilder
 import com.devourer.alexb.diaryforthecoolestboys.Fragments.DatePickerBottomNavigationDrawerFragment
@@ -45,6 +45,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 import com.devourer.alexb.diaryforthecoolestboys.FingerprintLibrary.AuthenticationCallback
+import com.google.android.material.animation.AnimationUtils.*
+import jp.wasabeef.recyclerview.adapters.AlphaInAnimationAdapter
+import jp.wasabeef.recyclerview.adapters.SlideInBottomAnimationAdapter
 import jp.wasabeef.recyclerview.animators.SlideInDownAnimator
 import jp.wasabeef.recyclerview.animators.SlideInUpAnimator
 
@@ -94,7 +97,7 @@ class MainActivity : AppCompatActivity() {
 
         if (intent.getBooleanExtra(INTENT_ID,false))
             snacks.snack("Authentication access!",Snackbar.LENGTH_LONG,R.color.colorBackSnackbar,"OK",R.color.colorOkActionSnackbar)
-        //
+
 
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id))
@@ -103,57 +106,57 @@ class MainActivity : AppCompatActivity() {
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
 
         fab.setOnClickListener {
-            if (!isChange) {
-                Log.w(TAG,"Вутри условия !isChange слушателя ФАБа")
-                taskListGroupAdapter.addTask(
-                    isAdd,
-                    taskEditText.text.toString(),
-                    taskDetailsEditText.text.toString(),
-                    dateAndTime,
-                    chipAddDate.isChecked,
-                    snacks
-                )
-                updateBarUI(isAdd)
-            }
-            else if (isChange){
-                Log.w(TAG,"Вутри условия isChange слушателя ФАБа")
-                taskListGroupAdapter.changeTask(
-                    taskEditText.text.toString(),
-                    taskDetailsEditText.text.toString(),
-                    chipAddDate.text.toString(),
-                    NavMenuCheckedItem.notificationDate,
-                    dateAndTime,
-                    NavMenuCheckedItem.position,
-                    snacks
-                )
-                isChange = false
-                updateBarUI(false)
+            slideBarUp()
+            when {
+                !isChange -> {
+                    Log.w(TAG,"Вутри условия !isChange слушателя ФАБа")
+                    taskListGroupAdapter.addTask(
+                        isAdd,
+                        taskEditText.text.toString(),
+                        taskDetailsEditText.text.toString(),
+                        dateAndTime,
+                        chipAddDate.isChecked,
+                        snacks
+                    )
+                    updateBarUI(isAdd)
+                }
+                isChange -> {
+                    Log.w(TAG,"Вутри условия isChange слушателя ФАБа")
+                    taskListGroupAdapter.changeTask(
+                        taskEditText.text.toString(),
+                        taskDetailsEditText.text.toString(),
+                        chipAddDate.text.toString(),
+                        NavMenuCheckedItem.notificationDate,
+                        dateAndTime,
+                        NavMenuCheckedItem.position,
+                        snacks
+                    )
+                    isChange = false
+                    updateBarUI(false)
+                }
             }
         }
 
         chipAddDate.onCheckedChangeListener = { view: CheckableChipView, isChecked: Boolean ->
-            if (isChecked && !isAdd) {
-                taskEditText.requestFocus()
-                Thread(Runnable {
-                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                    var view = currentFocus
-                    if (view == null)
-                        view = View(this)
-                    handler.post { imm.hideSoftInputFromWindow(view.windowToken, 0) }
-                    TimeUnit.MILLISECONDS.sleep(200)
-                    handler.post {
-                        val datePickerBottomNavigationDrawerFragment = DatePickerBottomNavigationDrawerFragment()
-                        datePickerBottomNavigationDrawerFragment.show(supportFragmentManager,DatePickerBottomNavigationDrawerFragment().tag)
-                    }
-                }).start()
+            when {
+                (isChecked && !isAdd) -> {
+                    taskEditText.requestFocus()
+                    Thread(Runnable {
+                        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                        var view = currentFocus
+                        if (view == null)
+                            view = View(this)
+                        handler.post { imm.hideSoftInputFromWindow(view.windowToken, 0) }
+                        TimeUnit.MILLISECONDS.sleep(200)
+                        handler.post {
+                            val datePickerBottomNavigationDrawerFragment = DatePickerBottomNavigationDrawerFragment()
+                            datePickerBottomNavigationDrawerFragment.show(supportFragmentManager,DatePickerBottomNavigationDrawerFragment().tag)
+                        }
+                    }).start()
 
+                }
+                (!isChecked && !isAdd) -> chipAddDate.text = resources.getText(R.string.add_date)
             }
-            else if(!isChecked && !isAdd){
-                chipAddDate.text = resources.getText(R.string.add_date)
-            }
-            /*else if(!isChecked){
-                NavMenuCheckedItem.notificationDate = ""
-            }*/
 
         }
 
@@ -176,24 +179,40 @@ class MainActivity : AppCompatActivity() {
 
 
         chipAddDetails.onCheckedChangeListener = { view: CheckableChipView, isChecked: Boolean ->
-            if (isChecked && !isAdd){
-                taskDetailsEditTextInputLayout.visibility = View.VISIBLE
-                taskDetailsEditText.requestFocus()
-                Thread(Runnable {
-                    TimeUnit.MILLISECONDS.sleep(300)
-                    handler.post {  val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                        imm.showSoftInput(taskDetailsEditText, InputMethodManager.SHOW_IMPLICIT)
-                    }
-                }).start()
-            }
-            else if(!isChecked && !isAdd){
-                taskDetailsEditText.setText("")
-                taskDetailsEditTextInputLayout.visibility = View.INVISIBLE
-                taskEditText.requestFocus()
+            when {
+                (isChecked && !isAdd) -> {
+                    taskDetailsEditTextInputLayout.visibility = View.VISIBLE
+                    taskDetailsEditText.requestFocus()
+                    Thread(Runnable {
+                        TimeUnit.MILLISECONDS.sleep(300)
+                        handler.post {  val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                            imm.showSoftInput(taskDetailsEditText, InputMethodManager.SHOW_IMPLICIT)
+                        }
+                    }).start()
+                }
+                (!isChecked && !isAdd) -> {
+                    taskDetailsEditText.setText("")
+                    taskDetailsEditTextInputLayout.visibility = View.INVISIBLE
+                    taskEditText.requestFocus()
+                }
             }
         }
 
         completedBtn.setOnClickListener { onCompletedBtn() }
+
+        contentScrollView.setOnScrollChangeListener { v: NestedScrollView?, scrollX: Int, scrollY: Int, oldScrollX: Int, oldScrollY: Int ->
+            when {
+                scrollY > oldScrollY -> slideBarDown()
+                scrollY < oldScrollY -> slideBarUp()
+            }
+        }
+
+        editScrollView.setOnScrollChangeListener { v: NestedScrollView?, scrollX: Int, scrollY: Int, oldScrollX: Int, oldScrollY: Int ->
+            when {
+                scrollY > oldScrollY -> slideBarDown()
+                scrollY < oldScrollY -> slideBarUp()
+            }
+        }
 
     }
 
@@ -212,11 +231,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateUI(user: FirebaseUser?) {
-        if (user == null) {
-
-            val intent = Intent(this,LoginActivity::class.java)
-            startActivity(intent)
-            finish()
+        when (user) {
+            null -> {
+                val intent = Intent(this,LoginActivity::class.java)
+                startActivity(intent)
+                finish()
+            }
         }
     }
 
@@ -239,19 +259,21 @@ class MainActivity : AppCompatActivity() {
             }
             R.id.delete -> {
                 isChange = false
-                if (Build.VERSION.SDK_INT >= 23){
-                    isDeleteTaskOrList = false
-                    FingerprintDialogBuilder(this)
-                        .setTitle("Delete")
-                        .setSubtitle("")
-                        .setDescription("Are you want to delete this task?")
-                        .setNegativeButton("Cancel")
-                        .show(mFragmentManager,callback)
-                }
-                else {
-                    isChange = false
-                    taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
-                    updateBarUI(false)
+                when {
+                    Build.VERSION.SDK_INT >= 23 -> {
+                        isDeleteTaskOrList = false
+                        FingerprintDialogBuilder(this)
+                            .setTitle("Delete")
+                            .setSubtitle("")
+                            .setDescription("Are you want to delete this task?")
+                            .setNegativeButton("Cancel")
+                            .show(mFragmentManager,callback)
+                    }
+                    else -> {
+                        isChange = false
+                        taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
+                        updateBarUI(false)
+                    }
                 }
             }
             android.R.id.home -> {
@@ -264,53 +286,55 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun updateBarUI(b:Boolean){
-        if (b){
-            progressBarMain.visibility = View.GONE
-            headerView.visibility = View.INVISIBLE
-            headerLineView.visibility = View.INVISIBLE
-            contentView.visibility = View.INVISIBLE
-            fab.setImageDrawable(getDrawable(R.drawable.avd_add_to_done))
-            val icon = fab.drawable
-            if(icon is AnimatedVectorDrawable)
-                icon.start()
-            taskEditTextLayout.visibility = View.VISIBLE
-            bar.navigationIcon = null
-            bar.replaceMenu(R.menu.empty_menu)
-            Thread(Runnable {
-                handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END}
-                //handler.post { fab.setImageDrawable(getDrawable(R.drawable.ic_done_white_24dp)) }
-                TimeUnit.MILLISECONDS.sleep(300)
-                handler.post {taskEditText.requestFocus()}
-                handler.post { bar.replaceMenu(R.menu.add_task_menu) }
-                handler.post {  val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                    imm.showSoftInput(taskEditText, InputMethodManager.SHOW_IMPLICIT) }
-            }).start()
-            isAdd = false
-        }
-        else {
-            taskEditText.setText("")
-            taskDetailsEditText.setText("")
-            chipAddDate.isChecked = false
-            chipAddDetails.isChecked = false
-            chipAddDate.text = resources.getText(R.string.add_date)
-            headerView.visibility = View.VISIBLE
-            headerLineView.visibility = View.VISIBLE
-            contentView.visibility = View.VISIBLE
-            taskDetailsEditTextInputLayout.visibility = View.INVISIBLE
-            taskEditTextLayout.visibility = View.INVISIBLE
-            fab.setImageDrawable(getDrawable(R.drawable.avd_done_to_add))
-            val icon = fab.drawable
-            if(icon is AnimatedVectorDrawable)
-                icon.start()
-            bar.replaceMenu(R.menu.empty_menu)
-            Thread(Runnable {
-                handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_CENTER}
-                //handler.post { fab.setImageDrawable(getDrawable(R.drawable.ic_add_white_24dp)) }
-                TimeUnit.MILLISECONDS.sleep(300)
-                handler.post { bar.replaceMenu(R.menu.main_menu) }
-                handler.post { bar.setNavigationIcon(R.drawable.ic_menu_white_24dp) }
-            }).start()
-            isAdd = true
+        when (b) {
+            true -> {
+                progressBarMain.visibility = View.GONE
+                headerView.visibility = View.INVISIBLE
+                headerLineView.visibility = View.INVISIBLE
+                contentScrollView.visibility = View.INVISIBLE
+                fab.setImageDrawable(getDrawable(R.drawable.avd_add_to_done))
+                val icon = fab.drawable
+                if(icon is AnimatedVectorDrawable)
+                    icon.start()
+                taskEditTextLayout.visibility = View.VISIBLE
+                bar.navigationIcon = null
+                bar.replaceMenu(R.menu.empty_menu)
+                Thread(Runnable {
+                    handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END}
+                    //handler.post { fab.setImageDrawable(getDrawable(R.drawable.ic_done_white_24dp)) }
+                    TimeUnit.MILLISECONDS.sleep(300)
+                    handler.post {taskEditText.requestFocus()}
+                    handler.post { bar.replaceMenu(R.menu.add_task_menu) }
+                    handler.post {  val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                        imm.showSoftInput(taskEditText, InputMethodManager.SHOW_IMPLICIT) }
+                }).start()
+                isAdd = false
+            }
+            false -> {
+                taskEditText.setText("")
+                taskDetailsEditText.setText("")
+                chipAddDate.isChecked = false
+                chipAddDetails.isChecked = false
+                chipAddDate.text = resources.getText(R.string.add_date)
+                headerView.visibility = View.VISIBLE
+                headerLineView.visibility = View.VISIBLE
+                contentScrollView.visibility = View.VISIBLE
+                taskDetailsEditTextInputLayout.visibility = View.INVISIBLE
+                taskEditTextLayout.visibility = View.INVISIBLE
+                fab.setImageDrawable(getDrawable(R.drawable.avd_done_to_add))
+                val icon = fab.drawable
+                if(icon is AnimatedVectorDrawable)
+                    icon.start()
+                bar.replaceMenu(R.menu.empty_menu)
+                Thread(Runnable {
+                    handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_CENTER}
+                    //handler.post { fab.setImageDrawable(getDrawable(R.drawable.ic_add_white_24dp)) }
+                    TimeUnit.MILLISECONDS.sleep(300)
+                    handler.post { bar.replaceMenu(R.menu.main_menu) }
+                    handler.post { bar.setNavigationIcon(R.drawable.ic_menu_white_24dp) }
+                }).start()
+                isAdd = true
+            }
         }
 
 
@@ -332,7 +356,7 @@ class MainActivity : AppCompatActivity() {
         }
         headerView.visibility = View.INVISIBLE
         headerLineView.visibility = View.INVISIBLE
-        contentView.visibility = View.INVISIBLE
+        contentScrollView.visibility = View.INVISIBLE
         taskEditTextLayout.visibility = View.VISIBLE
         bar.navigationIcon = null
         fab.setImageDrawable(getDrawable(R.drawable.avd_add_to_done))
@@ -424,7 +448,7 @@ class MainActivity : AppCompatActivity() {
                 for ((i) in (0 until it.result!!.size()).withIndex()){
                     val doc = it.result!!.documents[i]
                     if (doc.get("key") == false){
-                        Log.w(TAG,"Внутри условия при key == false")
+                        //Log.w(TAG,"Внутри условия при key == false")
                         //Log.w(TAG,"notification_date TYPE -> ${test!!::class.simpleName}")
                         mTasks.add(Task(
                             doc.get("text") as String,
@@ -441,10 +465,10 @@ class MainActivity : AppCompatActivity() {
                     if(it.isSuccessful){
                         Log.w(TAG, "it is successful order by completion_date")
                         for ((i) in (0 until it.result!!.size()).withIndex()){
-                            Log.w(TAG,"initTasks | Внутри for")
+                            //Log.w(TAG,"initTasks | Внутри for")
                             val doc = it.result!!.documents[i]
                             if (doc.get("key") == true){
-                                Log.w(TAG,"Внутри условия при key == true")
+                                //Log.w(TAG,"Внутри условия при key == true")
                                 mCompletedTasks.add(CompletedTask(
                                     doc.get("text") as String,
                                     doc.get("details_text") as String,
@@ -510,6 +534,7 @@ class MainActivity : AppCompatActivity() {
                     notificationDate: Any?,
                     position: Int
                 ) {
+                    slideBarUp()
                     updateUIWhenTaskTextIsClicked(taskText, taskDetailsText, notificationDate)
                     NavMenuCheckedItem.position = position
                     NavMenuCheckedItem.taskText = taskText
@@ -521,8 +546,11 @@ class MainActivity : AppCompatActivity() {
         )
         tasksListGroup.apply {
             itemAnimator = SlideInDownAnimator()
-            adapter = taskListGroupAdapter
             layoutManager = LinearLayoutManager(this@MainActivity)
+        }
+        tasksListGroup.adapter = AlphaInAnimationAdapter(SlideInBottomAnimationAdapter(taskListGroupAdapter)).apply {
+            setDuration(500)
+            setFirstOnly(false)
         }
         tasksListGroup.itemAnimator?.apply {
             addDuration = 300
@@ -560,8 +588,11 @@ class MainActivity : AppCompatActivity() {
                 )
         completedTasksListGroup.apply {
             itemAnimator = SlideInUpAnimator()
-            adapter = completedTasksListGroupAdapter
             layoutManager = LinearLayoutManager(this@MainActivity)
+        }
+        completedTasksListGroup.adapter = AlphaInAnimationAdapter(SlideInBottomAnimationAdapter(completedTasksListGroupAdapter)).apply {
+            setDuration(500)
+            setFirstOnly(false)
         }
         completedTasksListGroup.itemAnimator?.apply {
             addDuration = 300
@@ -576,10 +607,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onBackPressed() {
         isChange = false
-        if (!isAdd)
-            updateBarUI(isAdd)
-        else
-            super.onBackPressed()
+        when (isAdd) {
+            false -> updateBarUI(isAdd)
+            true -> super.onBackPressed()
+        }
+        slideBarUp()
     }
 
 
@@ -643,25 +675,61 @@ class MainActivity : AppCompatActivity() {
 
     private fun onCompletedBtn(){
         val params = completedTasksListGroup.layoutParams
-        if(params.height == 0) {
-            completedBtn.icon = ResourcesCompat.getDrawable(resources,R.drawable.avd_arrow_down_to_up,null)
-            underBtnView.visibility = View.GONE
-            params.height = ViewGroup.LayoutParams.WRAP_CONTENT
+        when (params.height) {
+            0 -> {
+                completedBtn.icon = ResourcesCompat.getDrawable(resources,R.drawable.avd_arrow_down_to_up,null)
+                underBtnView.visibility = View.GONE
+                params.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            }
+            ViewGroup.LayoutParams.WRAP_CONTENT -> {
+                underBtnView.visibility = View.VISIBLE
+                params.height = 0
+                completedBtn.icon = ResourcesCompat.getDrawable(resources,R.drawable.avd_arrow_up_to_down,null)
+            }
         }
-        else {
-            completedBtn.icon = ResourcesCompat.getDrawable(resources,R.drawable.avd_arrow_up_to_down,null)
-            underBtnView.visibility = View.VISIBLE
-            params.height = 0
 
-        }
         val icon = completedBtn.icon as AnimatedVectorDrawable
         icon.start()
         completedTasksListGroupAdapter.onCompletedBtn()
         isCompletedListGroupExpanded = !isCompletedListGroupExpanded
+
+
     }
 
     fun setChipChecked(isChecked: Boolean){
         chipAddDate.isChecked = isChecked
+    }
+
+    private fun slideBarUp(){
+        bar.clearAnimation()
+        fab.clearAnimation()
+        bar.animate()
+            .translationY(0f)
+            .setInterpolator(LINEAR_OUT_SLOW_IN_INTERPOLATOR)
+            .duration = 225
+
+        fab.animate()
+            .translationY(-100f)
+            .setInterpolator(LINEAR_OUT_SLOW_IN_INTERPOLATOR)
+            .duration = 225
+    }
+
+    private fun slideBarDown(){
+        bar.clearAnimation()
+        fab.clearAnimation()
+        val fabContentRect = Rect()
+        fab.getContentRect(fabContentRect)
+        val fabShadowPadding: Float = fab.measuredHeight - fabContentRect.height().toFloat()
+        bar.animate()
+            .translationY(170f)
+            .setInterpolator(FAST_OUT_LINEAR_IN_INTERPOLATOR)
+            .duration = 175
+
+        fab.animate()
+            .translationY(-fab.paddingBottom + fabShadowPadding)
+            .setInterpolator(FAST_OUT_LINEAR_IN_INTERPOLATOR)
+            .duration = 175
+
     }
 
 
@@ -780,24 +848,26 @@ class MainActivity : AppCompatActivity() {
                 snackbarLayout,
                 text,
                 duration)
-            Log.w(TAG, "completedSnack | map -> $map")
+            //Log.w(TAG, "completedSnack | map -> $map")
             snackbar.setAction(actionText) {
-                if (!key) {
-                    completedTasksListGroupAdapter.moveTaskToNotCompleted(0) // delete task from completedTasksListGroup
-                    val task = Task(map)
-                    task.id = id
-                    taskListGroupAdapter.moveTaskFromCompleted(task, position) // add task to TasksListGroup
-                    showCompletedBtnWhenTaskMoved()
-                    fire.addTaskToNotCompleted(map, id)
-                }
-                else{
-                    Log.w(TAG, "completedSnack | key = true | map -> $map")
-                    taskListGroupAdapter.moveTaskToCompleted(0)
-                    val completedTask = CompletedTask(map)
-                    completedTask.id = id
-                    completedTasksListGroupAdapter.addTask(completedTask, position)
-                    showCompletedBtnWhenTaskMoved()
-                    fire.addTaskToCompleted(id,map["completion_date"])
+                when (key) {
+                    false -> {
+                        completedTasksListGroupAdapter.moveTaskToNotCompleted(0) // delete task from completedTasksListGroup
+                        val task = Task(map)
+                        task.id = id
+                        taskListGroupAdapter.moveTaskFromCompleted(task, position) // add task to TasksListGroup
+                        showCompletedBtnWhenTaskMoved()
+                        fire.addTaskToNotCompleted(map, id)
+                    }
+                    true -> {
+                        //Log.w(TAG, "completedSnack | key = true | map -> $map")
+                        taskListGroupAdapter.moveTaskToCompleted(0)
+                        val completedTask = CompletedTask(map)
+                        completedTask.id = id
+                        completedTasksListGroupAdapter.addTask(completedTask, position)
+                        showCompletedBtnWhenTaskMoved()
+                        fire.addTaskToCompleted(id,map["completion_date"])
+                    }
                 }
 
                 snackbar.dismiss()
@@ -824,12 +894,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onAuthenticationSucceeded() {
-            if(isDeleteTaskOrList){
-                deleteTaskList()
-            }
-            else {
-                taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
-                updateBarUI(false)
+            when(isDeleteTaskOrList){
+                true -> deleteTaskList()
+                false -> {
+                    taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
+                    updateBarUI(false)
+                }
             }
         }
 
@@ -842,23 +912,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun fingerprintAuthenticationNotSupported() {
-            if(isDeleteTaskOrList){
-                deleteTaskList()
-            }
-            else {
-                taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
-                updateBarUI(false)
+            when(isDeleteTaskOrList) {
+                true -> deleteTaskList()
+                false -> {
+                    taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
+                    updateBarUI(false)
+                }
             }
 
         }
 
         override fun hasNoFingerprintEnrolled() {
-            if(isDeleteTaskOrList){
-                deleteTaskList()
-            }
-            else {
-                taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
-                updateBarUI(false)
+            when(isDeleteTaskOrList) {
+                true -> deleteTaskList()
+                false -> {
+                    taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
+                    updateBarUI(false)
+                }
             }
         }
 
