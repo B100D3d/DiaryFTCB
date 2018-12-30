@@ -488,10 +488,14 @@ class MainActivity : AppCompatActivity() {
                         taskListGroupAdapter.notifyDataSetChanged()
                         Log.w(TAG,"Обновление адаптера taskList при инициализации таскс")
                     }
+                    else{
+                        Log.w(TAG, "ERROR initTasks (by completion_date)  -> ${it.exception}")
+                    }
 
                 }
             }
             else{
+                Log.w(TAG, "ERROR initTasks (by date) -> ${it.exception}")
                 progressBarMain.visibility = View.INVISIBLE
                 snacks.snack("Something went wrong!",Snackbar.LENGTH_LONG,R.color.colorBackSnackbar,"ERROR",R.color.colorErrorActionBar)
             }

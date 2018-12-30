@@ -64,8 +64,8 @@ class AddTasksListActivity : AppCompatActivity() {
         t.start()
 
         addTaskListDoneBtn.setOnClickListener {
-            if (!addTaskListEditText.text.isNullOrEmpty() && addTaskListEditText.text!!.length > 47){
-                Thread(Runnable {
+            when {
+                (addTaskListEditText.text!!.length > 47) -> Thread(Runnable {
                     val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                     var view = currentFocus
                     if (view == null)
@@ -74,14 +74,20 @@ class AddTasksListActivity : AppCompatActivity() {
                     TimeUnit.MILLISECONDS.sleep(300)
                     handler.post {snack("Too many characters in the title!", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)}
                 }).start()
-
-            }
-            else if (addTaskListEditText.text.isNullOrEmpty()) {
-                hideKeyboard()
-            } else {
-                updateUi()
+                (addTaskListEditText.text.isNullOrEmpty()) -> hideKeyboard()
+                (addTaskListEditText.text!![0] == '.' && addTaskListEditText.text!!.length == 1) -> {
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    var view = currentFocus
+                    if (view == null)
+                        view = View(this)
+                    handler.post {imm.hideSoftInputFromWindow(view.windowToken, 0)}
+                    TimeUnit.MILLISECONDS.sleep(300)
+                    snack("Title name can't be a \".\"", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)
+                }
+                else -> updateUi()
             }
         }
+
         addTaskListCancelBtn.setOnClickListener {
             hideKeyboard()
         }
@@ -137,12 +143,16 @@ class AddTasksListActivity : AppCompatActivity() {
             mapOf(
                 "name" to addTaskListEditText.text.toString(),
                 "id" to rand,
-                "date" to Timestamp(Date())
+                "date" to Date()
             )
         )
             .addOnCompleteListener {
                 if (it.isSuccessful) {
                     Log.w(TAG, "AddTasksActivity | successful adding list")
+                }
+                else{
+                    Log.w(TAG, "ERROR -> ${it.exception}")
+
                 }
             }
         NavMenuCheckedItem.id = rand

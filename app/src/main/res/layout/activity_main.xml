@@ -8,12 +8,18 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fitsSystemWindows="true"
-        tools:context=".MainActivity" android:visibility="visible" android:background="@drawable/background_main">
+        tools:context=".MainActivity" android:visibility="visible"
+        android:background="@drawable/background_main">
+    <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
 
     <androidx.core.widget.NestedScrollView
             android:id="@+id/editScrollView"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
+
         <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/taskEditTextLayout"
                 android:layout_width="match_parent"
@@ -23,6 +29,7 @@
                 android:layout_marginEnd="10dp"
                 android:layout_marginStart="20dp"
                 android:visibility="invisible">
+
 
             <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/taskEditTextInputLayout"
@@ -159,6 +166,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp">
 
+
+
         <LinearLayout
                 android:orientation="vertical"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -262,7 +271,22 @@
 
     </androidx.core.widget.NestedScrollView>
 
-
+        <com.devourer.alexb.diaryforthecoolestboys.Snowfall.SnowfallView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:snowflakesNum="250"
+                app:snowflakeAlphaMin="50"
+                app:snowflakeAlphaMax="200"
+                app:snowflakeAngleMax="1"
+                app:snowflakeSizeMin="1dp"
+                app:snowflakeSizeMax="12dp"
+                app:snowflakeSpeedMin="4"
+                app:snowflakeSpeedMax="8"
+                app:snowflakesFadingEnabled="false"
+                app:snowflakesAlreadyFalling="false"
+                app:snowflakeImage="@drawable/flakes"
+        />
+    </FrameLayout>
     <com.google.android.material.bottomappbar.BottomAppBar
             android:id="@+id/bar"
             android:layout_width="match_parent"
@@ -291,6 +315,5 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/snackbarLayout"/>
-
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
