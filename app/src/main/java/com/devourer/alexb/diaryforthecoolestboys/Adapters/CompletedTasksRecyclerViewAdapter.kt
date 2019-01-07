@@ -140,6 +140,8 @@ class CompletedTasksRecyclerViewAdapter(
             mCompletedTasks.removeAt(position)
             notifyItemRemoved(position)
         }
+        if (mCompletedTasks.isEmpty())
+            isExpanded = false
         fire.addTaskToNotCompleted(task.map,task.id)
 
     }

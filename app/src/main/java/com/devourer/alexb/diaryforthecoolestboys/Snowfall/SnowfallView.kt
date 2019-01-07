@@ -119,7 +119,7 @@ class SnowfallView(context: Context, attrs: AttributeSet) : View(context, attrs)
             speedMax = snowflakeSpeedMax,
             fadingEnabled = snowflakesFadingEnabled,
             alreadyFalling = snowflakesAlreadyFalling)
-        return Array(snowflakesNum, { Snowflake(snowflakeParams) })
+        return Array(snowflakesNum) { Snowflake(snowflakeParams) }
     }
 
     private fun updateSnowflakes() {

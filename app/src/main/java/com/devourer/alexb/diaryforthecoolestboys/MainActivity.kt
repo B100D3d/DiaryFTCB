@@ -642,16 +642,21 @@ class MainActivity : AppCompatActivity() {
     fun showCompletedBtnWhenTaskMoved(){
         if (!mCompletedTasks.isEmpty()){
             completedBtnLayout.visibility = View.VISIBLE
-            if (isCompletedListGroupExpanded)
+            if (isCompletedListGroupExpanded) {
+                completedBtn.icon = ResourcesCompat.getDrawable(resources, R.drawable.avd_arrow_up_to_down, null)
                 underBtnView.visibility = View.GONE
-            else
+            }
+            else {
+                completedBtn.icon = ResourcesCompat.getDrawable(resources, R.drawable.avd_arrow_down_to_up, null)
                 underBtnView.visibility = View.VISIBLE
+            }
             completedBtn.text = "Completed (${mCompletedTasks.size})"
             setBottomMargin(tasksListGroup,0f)
             setBottomMargin(completedTasksListGroup,90f)
         }
         else{
             completedBtnLayout.visibility = View.GONE
+            isCompletedListGroupExpanded = false
             //completedTasksListGroup.visibility = View.GONE
             val params = completedTasksListGroup.layoutParams
             params.height = 0
@@ -691,13 +696,10 @@ class MainActivity : AppCompatActivity() {
                 completedBtn.icon = ResourcesCompat.getDrawable(resources,R.drawable.avd_arrow_up_to_down,null)
             }
         }
-
         val icon = completedBtn.icon as AnimatedVectorDrawable
         icon.start()
         completedTasksListGroupAdapter.onCompletedBtn()
         isCompletedListGroupExpanded = !isCompletedListGroupExpanded
-
-
     }
 
     fun setChipChecked(isChecked: Boolean){
