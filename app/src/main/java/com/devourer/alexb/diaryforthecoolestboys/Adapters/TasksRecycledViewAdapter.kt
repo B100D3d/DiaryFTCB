@@ -8,12 +8,10 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.devourer.alexb.diaryforthecoolestboys.MyFirebase
 import com.devourer.alexb.diaryforthecoolestboys.R
 import com.devourer.alexb.diaryforthecoolestboys.Task
-import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
 import java.text.SimpleDateFormat
 import java.util.*
@@ -46,6 +44,7 @@ class TasksRecyclerViewAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        Log.w(TAG, "Tasks onBindViewHolder $position")
         /*val date: Date = mTaskDate[position] as Date
         val sdf = java.text.SimpleDateFormat("dd/M/yyyy hh:mm:ss")
         val sDate = sdf.format(date)*/
@@ -67,7 +66,7 @@ class TasksRecyclerViewAdapter(
         super.onViewAttachedToWindow(holder)
 
 
-        holder.taskNotCompleteImageLayout.setOnClickListener {
+        holder.taskNotCompleteImageView.setOnClickListener {
 
             val position = holder.adapterPosition
             val task = mTasks[position]
@@ -77,9 +76,6 @@ class TasksRecyclerViewAdapter(
 
 
         }
-
-
-
 
         holder.taskTextLayout.setOnClickListener {
 
@@ -101,10 +97,9 @@ class TasksRecyclerViewAdapter(
 
         var taskText: TextView = itemView.findViewById(R.id.taskText)
         var taskDetailsText: TextView = itemView.findViewById(R.id.detailsTaskText)
-        var taskNotificationDateChip: Chip = itemView.findViewById(R.id.taskNotificationDateChip)
-        //var taskDate: TextView = itemView.findViewById(R.id.dateOfTask)
-        var parentLayout: ConstraintLayout = itemView.findViewById(R.id.parent_layout)
-        var taskNotCompleteImageLayout: LinearLayout = itemView.findViewById(R.id.taskNotCompleteImageLayout)
+        var taskNotificationDateText: TextView = itemView.findViewById(R.id.taskNotificationDateText)
+        var parentLayout: LinearLayout = itemView.findViewById(R.id.parent_layout)
+        //var taskNotCompleteImageLayout: LinearLayout = itemView.findViewById(R.id.taskNotCompleteImageLayout)
         var taskNotCompleteImageView: ImageView = itemView.findViewById(R.id.taskNotCompleteImage)
         var taskTextLayout: LinearLayout = itemView.findViewById(R.id.taskTextLayout)
 
@@ -126,8 +121,8 @@ class TasksRecyclerViewAdapter(
 
     }
 
-    fun addTask(task: Task, position: Int){
-        mTasks.add(position, task)
+    fun addTask(task: Any, position: Int){
+        mTasks.add(position, task as Task)
         notifyItemInserted(position)
         fire.addTask(task.map, task.id)
     }
@@ -196,6 +191,7 @@ class TasksRecyclerViewAdapter(
             R.color.colorUNDOActionSnackbar,
             task.taskText,
             task.dateOfTasks,
+            null,
             task.taskDetailsText,
             task.notificationDateOfTask,
             task.id,
@@ -257,13 +253,13 @@ class TasksRecyclerViewAdapter(
     }
 
     private fun setNotificationDateChip(holder: ViewHolder, position: Int){
-        Log.w(TAG,"setNotificationDateChip | position -> $position")
-        holder.taskNotificationDateChip.visibility = View.GONE
+        //Log.w(TAG,"setNotificationDateChip | position -> $position")
+        holder.taskNotificationDateText.visibility = View.GONE
         if (mTasks[position].notificationDateOfTask != null){
-            holder.taskNotificationDateChip.visibility = View.VISIBLE
+            holder.taskNotificationDateText.visibility = View.VISIBLE
             val notificationDate = mTasks[position].notificationDateOfTask as Date
             val dateFormat = SimpleDateFormat("yyyy MMMM dd, h:mm a")
-            holder.taskNotificationDateChip.text = dateFormat.format(notificationDate.time)
+            holder.taskNotificationDateText.text = dateFormat.format(notificationDate.time)
         }
 
     }

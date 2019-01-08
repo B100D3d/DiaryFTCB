@@ -1,8 +1,12 @@
 package com.devourer.alexb.diaryforthecoolestboys
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.app.FragmentManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Paint
 import android.graphics.Point
 import android.graphics.Rect
 import android.graphics.drawable.AnimatedVectorDrawable
@@ -17,7 +21,8 @@ import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -47,15 +52,12 @@ import kotlin.collections.ArrayList
 import com.devourer.alexb.diaryforthecoolestboys.FingerprintLibrary.AuthenticationCallback
 import com.google.android.material.animation.AnimationUtils.*
 import jp.wasabeef.recyclerview.adapters.AlphaInAnimationAdapter
-import jp.wasabeef.recyclerview.adapters.SlideInBottomAnimationAdapter
-import jp.wasabeef.recyclerview.animators.SlideInDownAnimator
-import jp.wasabeef.recyclerview.animators.SlideInUpAnimator
+import jp.wasabeef.recyclerview.animators.*
 
 
 class MainActivity : AppCompatActivity() {
 
-
-
+    private var isBarAnimateEnd = true
     private val mAuth = FirebaseAuth.getInstance()
     private val myDB = FirebaseFirestore.getInstance()
     lateinit var fire: MyFirebase
@@ -64,6 +66,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var snackbar: Snackbar
     private var isAdd: Boolean = true
     private var isChange: Boolean = false
+    private var isCompleted: Boolean = false
     var isDeleteTaskOrList = false // false — task | true — list
     private var isCompletedListGroupExpanded = false
     private val handler = Handler()
@@ -122,15 +125,17 @@ class MainActivity : AppCompatActivity() {
                 }
                 isChange -> {
                     Log.w(TAG,"Вутри условия isChange слушателя ФАБа")
-                    taskListGroupAdapter.changeTask(
-                        taskEditText.text.toString(),
-                        taskDetailsEditText.text.toString(),
-                        chipAddDate.text.toString(),
-                        NavMenuCheckedItem.notificationDate,
-                        dateAndTime,
-                        NavMenuCheckedItem.position,
-                        snacks
-                    )
+                    if (!isCompleted) {
+                        taskListGroupAdapter.changeTask(
+                            taskEditText.text.toString(),
+                            taskDetailsEditText.text.toString(),
+                            chipAddDate.text.toString(),
+                            NavMenuCheckedItem.notificationDate,
+                            dateAndTime,
+                            NavMenuCheckedItem.position,
+                            snacks
+                        )
+                    }
                     isChange = false
                     updateBarUI(false)
                 }
@@ -200,17 +205,22 @@ class MainActivity : AppCompatActivity() {
 
         completedBtn.setOnClickListener { onCompletedBtn() }
 
-        contentScrollView.setOnScrollChangeListener { v: NestedScrollView?, scrollX: Int, scrollY: Int, oldScrollX: Int, oldScrollY: Int ->
-            when {
-                scrollY > oldScrollY -> slideBarDown()
-                scrollY < oldScrollY -> slideBarUp()
+        contentScrollView.setOnScrollChangeListener { _: NestedScrollView?, _: Int, scrollY: Int, _: Int, oldScrollY: Int ->
+            //Log.w(TAG, "ScrollY -> $scrollY")
+            if (isBarAnimateEnd){
+                when{
+                    scrollY > oldScrollY -> slideBarDown()
+                    scrollY < oldScrollY -> slideBarUp()
+                }
             }
         }
 
-        editScrollView.setOnScrollChangeListener { v: NestedScrollView?, scrollX: Int, scrollY: Int, oldScrollX: Int, oldScrollY: Int ->
-            when {
-                scrollY > oldScrollY -> slideBarDown()
-                scrollY < oldScrollY -> slideBarUp()
+        editScrollView.setOnScrollChangeListener { _: NestedScrollView?, _: Int, scrollY: Int, _: Int, oldScrollY: Int ->
+            if (isBarAnimateEnd){
+                when{
+                    scrollY > oldScrollY -> slideBarDown()
+                    scrollY < oldScrollY -> slideBarUp()
+                }
             }
         }
 
@@ -218,6 +228,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        initRecyclerView()
     }
 
     fun signOut() {
@@ -271,7 +282,10 @@ class MainActivity : AppCompatActivity() {
                     }
                     else -> {
                         isChange = false
-                        taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
+                        when{
+                            !isCompleted -> { taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks) }
+                            isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(NavMenuCheckedItem.position) }
+                        }
                         updateBarUI(false)
                     }
                 }
@@ -311,6 +325,15 @@ class MainActivity : AppCompatActivity() {
                 isAdd = false
             }
             false -> {
+                if (isCompleted){
+                    taskEditText.isEnabled = true
+                    taskDetailsEditText.isEnabled = true
+                    taskEditText.paintFlags = 1282 // Standard
+                    taskDetailsEditText.paintFlags = 1282
+                    chipAddDate.isClickable = true
+                    chipAddDetails.isClickable = true
+
+                }
                 taskEditText.setText("")
                 taskDetailsEditText.setText("")
                 chipAddDate.isChecked = false
@@ -334,6 +357,7 @@ class MainActivity : AppCompatActivity() {
                     handler.post { bar.setNavigationIcon(R.drawable.ic_menu_white_24dp) }
                 }).start()
                 isAdd = true
+                isCompleted = false
             }
         }
 
@@ -372,14 +396,56 @@ class MainActivity : AppCompatActivity() {
         isAdd = false
     }
 
+    fun updateUIWhenCompletedTaskTextIsClicked(taskText: String, taskDetailsText: String?, _notificationDate: Any?){
+        Log.w(TAG,"paintFlags -> ${taskEditText.paintFlags}")
+        taskEditText.paintFlags = Paint.STRIKE_THRU_TEXT_FLAG
+        Log.w(TAG,"paintFlags! -> ${taskEditText.paintFlags}")
+        taskEditText.isEnabled = false
+        chipAddDetails.isClickable = false
+        chipAddDate.isClickable = false
+        taskEditText.setText(taskText)
+        taskEditText.requestFocus()
+        val dateFormat = SimpleDateFormat("yyyy MMMM dd, h:mm a")
+        val notificationDate = if (_notificationDate != null) dateFormat.format((_notificationDate as Date).time) else ""
+        if (!taskDetailsText.isNullOrBlank()){
+            chipAddDetails.isChecked = true
+            taskDetailsEditTextInputLayout.visibility = View.VISIBLE
+            Log.w(TAG,"paintFlags1 -> ${taskDetailsEditText.paintFlags}")
+            taskDetailsEditText.paintFlags = Paint.STRIKE_THRU_TEXT_FLAG
+            Log.w(TAG,"paintFlags1! -> ${taskDetailsEditText.paintFlags}")
+            taskDetailsEditText.isEnabled = false
+            taskDetailsEditText.setText(taskDetailsText)
+            taskEditText.requestFocus()
+        }
+        if (!notificationDate.isNullOrBlank()){
+            chipAddDate.isChecked = true
+            chipAddDate.text = notificationDate
+        }
+        headerView.visibility = View.INVISIBLE
+        headerLineView.visibility = View.INVISIBLE
+        contentScrollView.visibility = View.INVISIBLE
+        taskEditTextLayout.visibility = View.VISIBLE
+        bar.navigationIcon = null
+        fab.setImageDrawable(getDrawable(R.drawable.avd_add_to_done))
+        val icon = fab.drawable
+        if(icon is AnimatedVectorDrawable)
+            icon.start()
+        bar.replaceMenu(R.menu.empty_menu)
+        Thread(Runnable {
+            handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END}
+            TimeUnit.MILLISECONDS.sleep(300)
+            handler.post { bar.replaceMenu(R.menu.edit_task_menu) }
+        }).start()
+        isAdd = false
+    }
+
 
     fun onNavItemSelected(title: String){
         progressBarMain.visibility = View.VISIBLE
         completedBtnLayout.visibility = View.GONE
-        val params = completedTasksListGroup.layoutParams
-        params.height = 0
-        setBottomMargin(tasksListGroup,90f)
-        initRecyclerView()
+        tasksListGroup.visibility = View.GONE
+        completedTasksListGroup.visibility = View.GONE
+        isCompletedListGroupExpanded = false
         list_name_text.text = title
         initTasks(title)
     }
@@ -424,8 +490,8 @@ class MainActivity : AppCompatActivity() {
                 }
             uIdDoc.collection(title).get().addOnCompleteListener {
                 if(it.isSuccessful){
-                    it.result!!.documents.forEach {
-                        it.reference.delete()
+                    it.result!!.documents.forEach { doc ->
+                        doc.reference.delete()
                     }
                 }
             }
@@ -480,13 +546,13 @@ class MainActivity : AppCompatActivity() {
                                 //Log.w(TAG,"mCompletedTasks[i] -> ${mCompletedTasks[i]}")
                             }
                         }
-
-                        progressBarMain.visibility = View.INVISIBLE
-                        showCompletedBtn()
+                        progressBarMain.visibility = View.GONE
                         completedTasksListGroupAdapter.notifyDataSetChanged()
                         Log.w(TAG,"Обновление адаптера completedTaskList при инициализации таскс")
                         taskListGroupAdapter.notifyDataSetChanged()
                         Log.w(TAG,"Обновление адаптера taskList при инициализации таскс")
+                        showCompletedBtn()
+
                     }
                     else{
                         Log.w(TAG, "ERROR initTasks (by completion_date)  -> ${it.exception}")
@@ -496,16 +562,69 @@ class MainActivity : AppCompatActivity() {
             }
             else{
                 Log.w(TAG, "ERROR initTasks (by date) -> ${it.exception}")
-                progressBarMain.visibility = View.INVISIBLE
+                progressBarMain.visibility = View.GONE
                 snacks.snack("Something went wrong!",Snackbar.LENGTH_LONG,R.color.colorBackSnackbar,"ERROR",R.color.colorErrorActionBar)
             }
-
-
         }
 
     }
 
     private fun initRecyclerView(){
+        completedTasksListGroupAdapter = CompletedTasksRecyclerViewAdapter(
+                    this,
+                    mCompletedTasks,
+                    snacks,
+                    object : CompletedAdapterInterface {
+                        override fun taskCompletedImageViewOnClick(
+                            completedTask: CompletedTask,
+                            task: Task,
+                            position: Int
+                        ) {
+                            taskListGroupAdapter.moveTaskFromCompleted(task,0) // add task to TasksListGroup
+                            showCompletedBtnWhenTaskMoved()
+                            snacks.completedSnack(
+                                "Task add to Not Completed",
+                                Snackbar.LENGTH_LONG,
+                                R.color.colorBackSnackbar,
+                                "UNDO",
+                                R.color.colorUNDOActionSnackbar,
+                                completedTask.map,
+                                true,
+                                completedTask.id,
+                                position
+                            )
+                        }
+
+                        override fun completedTaskTextViewOnClick(
+                            taskText: String,
+                            taskDetailsText: String,
+                            notificationDate: Any?,
+                            position: Int
+                        ) {
+                            slideBarUp()
+                            updateUIWhenCompletedTaskTextIsClicked(taskText,taskDetailsText,notificationDate)
+                            isChange = true
+                            isCompleted = true
+                            NavMenuCheckedItem.position = position
+                        }
+
+                    }
+                )
+        completedTasksListGroup.apply {
+            itemAnimator = LandingAnimator()
+            layoutManager = LinearLayoutManager(this@MainActivity)
+        }
+        completedTasksListGroup.adapter = AlphaInAnimationAdapter(completedTasksListGroupAdapter).apply {
+            setDuration(500)
+            setFirstOnly(false)
+        }
+        completedTasksListGroup.itemAnimator?.apply {
+            addDuration = 300
+            changeDuration = 300
+            removeDuration = 300
+            moveDuration = 300
+        }
+        ///////////////////////////////////////////////////////////////////
         taskListGroupAdapter = TasksRecyclerViewAdapter(
             this,
             mTasks,
@@ -549,10 +668,10 @@ class MainActivity : AppCompatActivity() {
             }
         )
         tasksListGroup.apply {
-            itemAnimator = SlideInDownAnimator()
+            itemAnimator = SlideInDownAnimator(OvershootInterpolator())
             layoutManager = LinearLayoutManager(this@MainActivity)
         }
-        tasksListGroup.adapter = AlphaInAnimationAdapter(SlideInBottomAnimationAdapter(taskListGroupAdapter)).apply {
+        tasksListGroup.adapter = AlphaInAnimationAdapter(taskListGroupAdapter).apply {
             setDuration(500)
             setFirstOnly(false)
         }
@@ -562,52 +681,8 @@ class MainActivity : AppCompatActivity() {
             removeDuration = 300
             moveDuration = 300
         }
-        completedTasksListGroupAdapter =
-                CompletedTasksRecyclerViewAdapter(
-                    this,
-                    mCompletedTasks,
-                    snacks,
-                    object : CompletedAdapterInterface {
-                        override fun taskCompletedImageViewOnClick(
-                            completedTask: CompletedTask,
-                            task: Task,
-                            position: Int
-                        ) {
-                            taskListGroupAdapter.moveTaskFromCompleted(task,0) // add task to TasksListGroup
-                            showCompletedBtnWhenTaskMoved()
-                            snacks.completedSnack(
-                                "Task add to Not Completed",
-                                Snackbar.LENGTH_LONG,
-                                R.color.colorBackSnackbar,
-                                "UNDO",
-                                R.color.colorUNDOActionSnackbar,
-                                completedTask.map,
-                                true,
-                                completedTask.id,
-                                position
-                            )
-                        }
-
-                    }
-                )
-        completedTasksListGroup.apply {
-            itemAnimator = SlideInUpAnimator()
-            layoutManager = LinearLayoutManager(this@MainActivity)
-        }
-        completedTasksListGroup.adapter = AlphaInAnimationAdapter(SlideInBottomAnimationAdapter(completedTasksListGroupAdapter)).apply {
-            setDuration(500)
-            setFirstOnly(false)
-        }
-        completedTasksListGroup.itemAnimator?.apply {
-            addDuration = 300
-            changeDuration = 300
-            removeDuration = 300
-            moveDuration = 300
-        }
 
     }
-
-
 
     override fun onBackPressed() {
         isChange = false
@@ -620,28 +695,26 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun showCompletedBtn(){
+        tasksListGroup.visibility = View.VISIBLE
         if(!mCompletedTasks.isEmpty()){
-            completedBtnLayout.visibility = View.VISIBLE
+            setBottomMargin(tasksListGroup, 0f)
             underBtnView.visibility = View.VISIBLE
+            completedBtnLayout.visibility = View.VISIBLE
             completedBtn.icon = ResourcesCompat.getDrawable(resources, R.drawable.avd_arrow_down_to_up, null)
             completedBtn.text = "Completed (${mCompletedTasks.size})"
-            setBottomMargin(tasksListGroup,0f)
-            setBottomMargin(completedTasksListGroup,90f)
             Log.w(TAG,"showCompletedBtn if completed")
         }
         else{
             completedBtnLayout.visibility = View.GONE
-            val params = completedTasksListGroup.layoutParams
-            params.height = 0
-            setBottomMargin(tasksListGroup,90f)
-            setBottomMargin(completedTasksListGroup, 0f)
-
+            setBottomMargin(tasksListGroup, 90f)
         }
     }
 
     fun showCompletedBtnWhenTaskMoved(){
+        Log.w(TAG, "isExpanded -> $isCompletedListGroupExpanded")
         if (!mCompletedTasks.isEmpty()){
             completedBtnLayout.visibility = View.VISIBLE
+            setBottomMargin(tasksListGroup, 0f)
             if (isCompletedListGroupExpanded) {
                 completedBtn.icon = ResourcesCompat.getDrawable(resources, R.drawable.avd_arrow_up_to_down, null)
                 underBtnView.visibility = View.GONE
@@ -651,17 +724,12 @@ class MainActivity : AppCompatActivity() {
                 underBtnView.visibility = View.VISIBLE
             }
             completedBtn.text = "Completed (${mCompletedTasks.size})"
-            setBottomMargin(tasksListGroup,0f)
-            setBottomMargin(completedTasksListGroup,90f)
         }
         else{
             completedBtnLayout.visibility = View.GONE
+            completedTasksListGroup.visibility = View.GONE
+            setBottomMargin(tasksListGroup, 90f)
             isCompletedListGroupExpanded = false
-            //completedTasksListGroup.visibility = View.GONE
-            val params = completedTasksListGroup.layoutParams
-            params.height = 0
-            setBottomMargin(tasksListGroup,90f)
-            setBottomMargin(completedTasksListGroup, 0f)
         }
     }
 
@@ -683,22 +751,78 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onCompletedBtn(){
-        val params = completedTasksListGroup.layoutParams
-        when (params.height) {
-            0 -> {
-                completedBtn.icon = ResourcesCompat.getDrawable(resources,R.drawable.avd_arrow_down_to_up,null)
+        when (isCompletedListGroupExpanded) {
+            false -> {
+                Log.w(TAG, "false")
+                completedTasksListGroup.visibility = View.VISIBLE
+                completedBtn.icon = ResourcesCompat.getDrawable(resources, R.drawable.avd_arrow_down_to_up, null)
                 underBtnView.visibility = View.GONE
-                params.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                val icon = completedBtn.icon as AnimatedVectorDrawable
+                icon.start()
+                Thread(Runnable {
+                    completedTasksListGroupAdapter.onCompletedBtn()
+                    handler.post {
+                        completedTasksListGroup.animate().alpha(1f).setDuration(300).setListener(object : AnimatorListenerAdapter(){
+                            override fun onAnimationEnd(animation: Animator?) {
+                                super.onAnimationEnd(animation)
+                                completedTasksListGroup.clearAnimation()
+                            }
+                        })
+                    }
+                    TimeUnit.MILLISECONDS.sleep(300)
+                    handler.post {
+                        val anim = ValueAnimator.ofInt(0, 40)
+                        anim.addUpdateListener {
+                            val v = it.animatedValue as Int
+                            contentScrollView.smoothScrollBy(0, v)
+                        }
+                        anim.duration = 200
+                        anim.interpolator = AccelerateDecelerateInterpolator()
+                        anim.start()
+                    }
+                }).start()
             }
-            ViewGroup.LayoutParams.WRAP_CONTENT -> {
-                underBtnView.visibility = View.VISIBLE
-                params.height = 0
+            true -> {
+                Log.w(TAG, "true")
                 completedBtn.icon = ResourcesCompat.getDrawable(resources,R.drawable.avd_arrow_up_to_down,null)
+                val icon = completedBtn.icon as AnimatedVectorDrawable
+                icon.start()
+                Thread(Runnable {
+                    handler.post {
+                        completedTasksListGroupAdapter.onCompletedBtn()
+                        completedTasksListGroup.animate().alpha(0f).setDuration(300).setListener(object : AnimatorListenerAdapter(){
+                            override fun onAnimationEnd(animation: Animator?) {
+                                super.onAnimationEnd(animation)
+                                completedTasksListGroup.clearAnimation()
+                            }
+                        })
+                    }
+                    TimeUnit.MILLISECONDS.sleep(300)
+                    handler.post {
+                        val y = if(completedTasksListGroup.y - 1200 < 0) 0 else (completedTasksListGroup.y - 1200).toInt()
+                        val currentScrollY = contentScrollView.scrollY
+                        if ((currentScrollY-y)/2 > 0){
+                            val anim = ValueAnimator.ofInt(currentScrollY, y)
+                            anim.addUpdateListener {
+                                val v = it.animatedValue as Int
+                                contentScrollView.smoothScrollTo(0, v)
+                                if (v == y){
+                                    underBtnView.visibility = View.VISIBLE
+                                    completedTasksListGroup.visibility = View.GONE
+                                }
+                            }
+                            anim.duration = (currentScrollY-y)/2.toLong()
+                            anim.interpolator = AccelerateDecelerateInterpolator()
+                            anim.start()
+                        }
+                        else
+                            underBtnView.visibility = View.VISIBLE
+
+                    }
+                }).start()
+
             }
         }
-        val icon = completedBtn.icon as AnimatedVectorDrawable
-        icon.start()
-        completedTasksListGroupAdapter.onCompletedBtn()
         isCompletedListGroupExpanded = !isCompletedListGroupExpanded
     }
 
@@ -707,34 +831,58 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun slideBarUp(){
-        bar.clearAnimation()
-        fab.clearAnimation()
+        isBarAnimateEnd = false
         bar.animate()
             .translationY(0f)
             .setInterpolator(LINEAR_OUT_SLOW_IN_INTERPOLATOR)
-            .duration = 225
+            .setDuration(225)
+            .setListener(object : AnimatorListenerAdapter(){
+                override fun onAnimationEnd(animation: Animator?) {
+                    super.onAnimationEnd(animation)
+                    bar.clearAnimation()
+                }
+            })
 
         fab.animate()
             .translationY(-100f)
             .setInterpolator(LINEAR_OUT_SLOW_IN_INTERPOLATOR)
-            .duration = 225
+            .setDuration(225)
+            .setListener(object : AnimatorListenerAdapter(){
+                override fun onAnimationEnd(animation: Animator?) {
+                    super.onAnimationEnd(animation)
+                    fab.clearAnimation()
+                    isBarAnimateEnd = true
+                }
+            })
     }
 
     private fun slideBarDown(){
-        bar.clearAnimation()
-        fab.clearAnimation()
+        isBarAnimateEnd = false
         val fabContentRect = Rect()
         fab.getContentRect(fabContentRect)
         val fabShadowPadding: Float = fab.measuredHeight - fabContentRect.height().toFloat()
         bar.animate()
             .translationY(170f)
             .setInterpolator(FAST_OUT_LINEAR_IN_INTERPOLATOR)
-            .duration = 175
+            .setDuration(175)
+            .setListener(object : AnimatorListenerAdapter(){
+                override fun onAnimationEnd(animation: Animator?) {
+                    super.onAnimationEnd(animation)
+                    bar.clearAnimation()
+                }
+            })
 
         fab.animate()
             .translationY(-fab.paddingBottom + fabShadowPadding)
             .setInterpolator(FAST_OUT_LINEAR_IN_INTERPOLATOR)
-            .duration = 175
+            .setDuration(175)
+            .setListener(object : AnimatorListenerAdapter(){
+                override fun onAnimationEnd(animation: Animator?) {
+                    super.onAnimationEnd(animation)
+                    fab.clearAnimation()
+                    isBarAnimateEnd = true
+                }
+            })
 
     }
 
@@ -794,13 +942,14 @@ class MainActivity : AppCompatActivity() {
             actionColor: Int,
             taskText: String,
             taskDate: Any?,
+            completionDate: Any?,
             taskDetailsText: String,
             notificationDate: Any?,
             taskId: String,
             key: Boolean,
             position: Int
         ) {
-            val task = Task(taskText,taskDetailsText,taskDate,notificationDate,taskId)
+            val task: Any = if(!key) Task(taskText,taskDetailsText,taskDate,notificationDate,taskId) else CompletedTask(taskText,taskDetailsText,taskDate,completionDate,notificationDate,taskId)
             val screenSize = Point()
             windowManager.defaultDisplay.getSize(screenSize)
             val marginSide = 0
@@ -810,7 +959,10 @@ class MainActivity : AppCompatActivity() {
                 text,
                 duration)
             snackbar.setAction(actionText) {
-                taskListGroupAdapter.addTask(task, position)
+                when{
+                    key -> {completedTasksListGroupAdapter.addTask(task,position)}
+                    !key -> {taskListGroupAdapter.addTask(task, position)}
+                }
                 Log.w(TAG,"Кнопка UNDO нажата, таска вернулась из Deleted суксесфул")
                 snackbar.dismiss()
                 Log.w(TAG,"Snackbar dismiss после UNDO")
@@ -903,7 +1055,10 @@ class MainActivity : AppCompatActivity() {
             when(isDeleteTaskOrList){
                 true -> deleteTaskList()
                 false -> {
-                    taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
+                    when{
+                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(NavMenuCheckedItem.position) }
+                        !isCompleted -> { taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks) }
+                    }
                     updateBarUI(false)
                 }
             }
@@ -921,7 +1076,10 @@ class MainActivity : AppCompatActivity() {
             when(isDeleteTaskOrList) {
                 true -> deleteTaskList()
                 false -> {
-                    taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
+                    when{
+                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(NavMenuCheckedItem.position) }
+                        !isCompleted -> { taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks) }
+                    }
                     updateBarUI(false)
                 }
             }
@@ -932,7 +1090,10 @@ class MainActivity : AppCompatActivity() {
             when(isDeleteTaskOrList) {
                 true -> deleteTaskList()
                 false -> {
-                    taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks)
+                    when{
+                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(NavMenuCheckedItem.position) }
+                        !isCompleted -> { taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks) }
+                    }
                     updateBarUI(false)
                 }
             }

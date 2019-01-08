@@ -13,6 +13,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.devourer.alexb.diaryforthecoolestboys.*
 import com.google.android.material.chip.Chip
+import com.google.android.material.snackbar.Snackbar
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
@@ -29,13 +30,12 @@ class CompletedTasksRecyclerViewAdapter(
     }
     private var isExpanded = false
     private var mCompletedTasks = ArrayList<CompletedTask>()
-    private var tempCompletedTasks = ArrayList<CompletedTask>()
     private var fire: MyFirebase = MyFirebase(mContext)
     var mSnackInterface: Snacks
     var mAdapterInterface: CompletedAdapterInterface
 
     init {
-        tempCompletedTasks = _completedTasks
+        mCompletedTasks = _completedTasks
         mAdapterInterface = _completedAdapterInterface
         mSnackInterface = _snackInterface
     }
@@ -52,6 +52,7 @@ class CompletedTasksRecyclerViewAdapter(
         setTaskText(holder,position)
         setTasksDetailsText(holder,position)
         setNotificationDateChip(holder,position)
+        Log.w(TAG, "CompletedTasks onBindViewHolder $position")
 
     }
 
@@ -59,7 +60,7 @@ class CompletedTasksRecyclerViewAdapter(
         super.onViewAttachedToWindow(holder)
 
         //Log.w(TAG,"!!!!!!mTasksDate -> $mTasksDate")
-        holder.taskCompletedImageLayout.setOnClickListener {
+        holder.taskCompletedImageView.setOnClickListener {
             val position = holder.adapterPosition
             val completedTask = mCompletedTasks[position]
             val task = Task(
@@ -71,6 +72,15 @@ class CompletedTasksRecyclerViewAdapter(
             )
             addTaskToNotCompleted(task, position)
             mAdapterInterface.taskCompletedImageViewOnClick(completedTask, task, position)
+        }
+
+        holder.completeTaskTextLayout.setOnClickListener {
+            mAdapterInterface.completedTaskTextViewOnClick(
+                mCompletedTasks[holder.adapterPosition].completedTaskText,
+                mCompletedTasks[holder.adapterPosition].completedTaskDetailsText,
+                mCompletedTasks[holder.adapterPosition].notificationDateOfCompletedTask,
+                holder.adapterPosition
+            )
         }
 
 
@@ -85,73 +95,73 @@ class CompletedTasksRecyclerViewAdapter(
 
         var completedTaskText: TextView = itemView.findViewById(R.id.completedTaskText)
         var completedTaskDetailsText: TextView = itemView.findViewById(R.id.completedDetailsTaskText)
-        var completedTaskNotificationDateChip: Chip = itemView.findViewById(R.id.completedTaskNotificationDateChip)
-        var parentLayout: ConstraintLayout = itemView.findViewById(R.id.parent_layout_)
-        var taskCompletedImageLayout: LinearLayout = itemView.findViewById(R.id.taskCompletedImageLayout)
+        var completedTaskNotificationDateText: TextView = itemView.findViewById(R.id.completedTaskNotificationDateText)
+        var parentLayout: LinearLayout = itemView.findViewById(R.id.parent_layout_)
+        //var taskCompletedImageLayout: LinearLayout = itemView.findViewById(R.id.taskCompletedImageLayout)
         var taskCompletedImageView: ImageView = itemView.findViewById(R.id.taskCompletedImage)
         var completeTaskTextLayout: LinearLayout = itemView.findViewById(R.id.completeTaskTextLayout)
 
     }
 
     fun onCompletedBtn(){
-        if (!isExpanded){
-            tempCompletedTasks.forEach {
-                mCompletedTasks.add(CompletedTask(it))
-            }
-            notifyItemRangeInserted(0,tempCompletedTasks.size)
-        }
-        else{
-            val size = mCompletedTasks.size
-            mCompletedTasks.clear()
-            notifyItemRangeRemoved(0, size)
-        }
         isExpanded = !isExpanded
     }
 
     fun addTask(task: Task, completionDate: Any?){
         val completedTask = CompletedTask(task.taskText,task.taskDetailsText,task.dateOfTasks, completionDate, task.notificationDateOfTask, task.id)
-        if (isExpanded) {
-            mCompletedTasks.add(0, completedTask)
-            notifyItemInserted(0)
-        }
-        tempCompletedTasks.add(0,completedTask)
+        mCompletedTasks.add(0, completedTask)
+        notifyItemInserted(0)
     }
 
-    fun addTask(completedTask: CompletedTask, position: Int){
-        if (isExpanded) {
-            mCompletedTasks.add(position, completedTask)
-            notifyItemInserted(position)
-        }
-        tempCompletedTasks.add(position,completedTask)
+    fun addTask(completedTask: Any, position: Int){
+        mCompletedTasks.add(position, completedTask as CompletedTask)
+        notifyItemInserted(position)
+        fire.addTask(completedTask.map,completedTask.id)
+
     }
 
     fun moveTaskToNotCompleted(position: Int){
-        tempCompletedTasks.removeAt(position)
-        if (isExpanded) {
-            mCompletedTasks.removeAt(position)
-            notifyItemRemoved(position)
-        }
+        mCompletedTasks.removeAt(position)
+        notifyItemRemoved(position)
 
     }
 
     private fun addTaskToNotCompleted(task: Task, position: Int){
-        tempCompletedTasks.removeAt(position)
-        if (isExpanded) {
-            mCompletedTasks.removeAt(position)
-            notifyItemRemoved(position)
-        }
+        mCompletedTasks.removeAt(position)
+        notifyItemRemoved(position)
         if (mCompletedTasks.isEmpty())
             isExpanded = false
         fire.addTaskToNotCompleted(task.map,task.id)
 
     }
 
+    fun deleteCompletedTask(position: Int){
+        val completedTask = mCompletedTasks[position]
+        mCompletedTasks.removeAt(position)
+        notifyItemRemoved(position)
+        mSnackInterface.removedSnack(
+            "Task removed",
+            Snackbar.LENGTH_LONG,
+            R.color.colorBackSnackbar,
+            "UNDO",
+            R.color.colorUNDOActionSnackbar,
+            completedTask.completedTaskText,
+            completedTask.dateOfCompletedTask,
+            completedTask.completionDateOfCompletedTask,
+            completedTask.completedTaskDetailsText,
+            completedTask.notificationDateOfCompletedTask,
+            completedTask.id,
+            true,
+            position
+        )
+        fire.deleteTask(completedTask.id)
+    }
+
     fun deleteAllCompletedTasks(){
         val completedTasks = ArrayList<CompletedTask>()
-        for ((i) in (0 until tempCompletedTasks.size).withIndex()){
-            completedTasks.add(CompletedTask(tempCompletedTasks[i]))
+        for ((i) in (0 until mCompletedTasks.size).withIndex()){
+            completedTasks.add(CompletedTask(mCompletedTasks[i]))
         }
-        tempCompletedTasks.clear()
         mCompletedTasks.clear()
         notifyItemRangeRemoved(0,mCompletedTasks.size)
         fire.deleteAllCompletedTasks(completedTasks)
@@ -208,12 +218,12 @@ class CompletedTasksRecyclerViewAdapter(
     }
 
     private fun setNotificationDateChip(holder: ViewHolder, position: Int) {
-        holder.completedTaskNotificationDateChip.visibility = View.GONE
+        holder.completedTaskNotificationDateText.visibility = View.GONE
         if (mCompletedTasks[position].notificationDateOfCompletedTask != null) {
-            holder.completedTaskNotificationDateChip.visibility = View.VISIBLE
+            holder.completedTaskNotificationDateText.visibility = View.VISIBLE
             val notificationDate: Date = mCompletedTasks[position].notificationDateOfCompletedTask as Date
             val dateFromat = SimpleDateFormat("yyyy MMMM dd, h:mm a")
-            holder.completedTaskNotificationDateChip.text = dateFromat.format(notificationDate.time)
+            holder.completedTaskNotificationDateText.text = dateFromat.format(notificationDate.time)
         }
     }
 }

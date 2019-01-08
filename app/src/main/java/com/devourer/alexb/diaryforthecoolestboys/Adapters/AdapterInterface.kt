@@ -11,6 +11,7 @@ interface AdapterInterface {
 
 interface CompletedAdapterInterface{
     fun taskCompletedImageViewOnClick(completedTask: CompletedTask, task: Task, position: Int)
+    fun completedTaskTextViewOnClick(taskText: String, taskDetailsText: String, notificationDate: Any?, position: Int)
 }
 
 interface Snacks{
@@ -35,6 +36,7 @@ interface Snacks{
         actionColor: Int,
         taskText: String,
         taskDate: Any?,
+        completionDate: Any?,
         taskDetailsText: String,
         notificationDate: Any?,
         taskId: String,
