@@ -815,8 +815,10 @@ class MainActivity : AppCompatActivity() {
                             anim.interpolator = AccelerateDecelerateInterpolator()
                             anim.start()
                         }
-                        else
+                        else{
                             underBtnView.visibility = View.VISIBLE
+                            completedTasksListGroup.visibility = View.GONE
+                            }
 
                     }
                 }).start()

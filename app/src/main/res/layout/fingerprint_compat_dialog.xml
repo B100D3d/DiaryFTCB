@@ -62,7 +62,7 @@
                         android:layout_marginTop="12dp"
                         android:ellipsize="marquee"
                         android:fadingEdge="horizontal"
-
+                        android:fontFamily="@font/google_sans_medium"
                         android:marqueeRepeatLimit="marquee_forever"
                         android:scrollHorizontally="true"
                         android:singleLine="true"
@@ -73,7 +73,7 @@
                 <TextView
                         android:id="@+id/subtitle_tv"
                         android:layout_width="match_parent"
-
+                        android:fontFamily="@font/google_sans_regular"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:maxLines="2"
@@ -85,7 +85,7 @@
             <TextView
                     android:id="@+id/description_tv"
                     android:layout_width="match_parent"
-
+                    android:fontFamily="@font/google_sans_regular"
                     android:layout_height="wrap_content"
                     android:layout_below="@id/title_bar"
                     android:layout_marginTop="8dp"
@@ -113,6 +113,7 @@
                     android:layout_marginTop="8dp"
                     android:gravity="center"
                     android:lines="2"
+                    android:fontFamily="@font/google_sans_medium"
                     android:maxLines="2"
                     android:textColor="@color/colorLogOut"
                     tools:text="@tools:sample/lorem" android:layout_alignParentStart="true"
@@ -127,6 +128,7 @@
                     android:layout_below="@id/fingerprint_status_tv"
                     android:layout_marginTop="16dp"
                     app:cornerRadius="20dp"
+                    android:fontFamily="@font/google_sans_medium"
                     android:text="@android:string/cancel"
                     android:textAppearance="@style/ButtonStyle"
                     android:layout_alignParentEnd="true" android:layout_marginEnd="16dp"

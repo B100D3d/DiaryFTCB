@@ -15,6 +15,7 @@
     <color name="colorErrorActionBar">#FFC41520</color>
     <color name="colorUNDOActionSnackbar">#7c4dff</color>
     <color name="colorBackItem">#147c4dff</color>
+    <color name="colorPressedBackItem">#0D7C4DFF</color>
     <color name="colorLogOut">#c4001d</color>
     //4688f5
 </resources>

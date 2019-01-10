@@ -51,6 +51,7 @@
                         android:theme="@style/MyEditTextStyle"
                         android:textColor="@color/colorItemText"
                         android:visibility="visible"
+                        android:fontFamily="google_sans_regular"
                         android:inputType="textMultiLine"
                         android:layout_marginTop="28dp"/>
 
@@ -117,7 +118,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     app:layout_constraintStart_toStartOf="parent"
-                    android:hint="@string/enter_details"
+                    android:hint="@string/add_details"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:visibility="invisible"
                     android:layout_marginStart="8dp" app:layout_constraintEnd_toEndOf="parent"
@@ -130,6 +131,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textSize="24sp"
+                        android:fontFamily="google_sans_regular"
                         android:theme="@style/MyEditTextStyle"
                         android:textColor="@color/colorItemText"
                         android:visibility="visible"
@@ -176,12 +178,12 @@
         >
             <TextView
                     android:id="@+id/list_name_text"
-                    android:text="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                    android:text=""
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     app:autoSizeMinTextSize="14sp" app:autoSizeMaxTextSize="35sp"
                     android:textSize="26sp" android:textColor="@color/colorItemText"
-                    android:maxWidth="350dp"/>
+                    android:maxWidth="350dp" android:fontFamily="@font/google_sans_medium"/>
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
@@ -242,6 +244,7 @@
                         android:visibility="visible"
                         app:rippleColor="@android:color/transparent"
                         app:strokeColor="@android:color/transparent"
+                        android:fontFamily="@font/google_sans_regular"
                         android:textAlignment="viewStart"
                         android:textAppearance="@style/TextAppearance.AppCompat.Small"
                         android:paddingRight="20dp"
@@ -295,9 +298,9 @@
             android:layout_gravity="bottom"
             app:backgroundTint="@color/colorBottomAppBar"
             app:fabAlignmentMode="center"
-            app:fabCradleRoundedCornerRadius="10dp"
+            app:fabCradleRoundedCornerRadius="20dp"
             app:fabCradleVerticalOffset="5dp"
-            app:fabCradleMargin="3dp"
+            app:fabCradleMargin="4dp"
             app:navigationIcon="@drawable/ic_menu_white_24dp"
             app:hideOnScroll="false"
             app:layout_scrollFlags="scroll|enterAlways"/>

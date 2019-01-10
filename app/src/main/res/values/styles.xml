@@ -34,12 +34,14 @@
     <style name="NavigationDrawerStyle" parent="MainAppTheme">
         <item name="android:textColor">@color/colorItemText</item>
         <item name="android:textSize">14sp</item><!-- text size in menu-->
+        <item name="android:fontFamily">@font/google_sans_regular</item>
         <item name="android:listPreferredItemHeightSmall">50dp</item><!-- item size in menu-->
         <item name="listPreferredItemHeightSmall">50dp</item><!-- item size in menu-->
         <item name="dialogCornerRadius">15dp</item>
+        <item name="selectableItemBackground">@android:color/transparent</item>
     </style>
     <style name="ButtonStyle" parent="TextAppearance.MaterialComponents.Button">
-
+        <item name="fontFamily">@font/google_sans_regular</item>
     </style>
     <style name="MyEditTextStyle" parent="android:Widget.Material.Light.EditText">
         <item name="colorAccent">@color/colorAccent</item>
