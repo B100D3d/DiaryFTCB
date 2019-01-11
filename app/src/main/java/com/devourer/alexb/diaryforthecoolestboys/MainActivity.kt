@@ -27,12 +27,8 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.devourer.alexb.diaryforthecoolestboys.Fragments.BottomNavigationDrawerFragment
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.material.bottomappbar.BottomAppBar
 import com.google.android.material.snackbar.Snackbar
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.concurrent.TimeUnit
@@ -44,13 +40,17 @@ import com.devourer.alexb.diaryforthecoolestboys.FingerprintLibrary.FingerprintD
 import com.devourer.alexb.diaryforthecoolestboys.Fragments.DatePickerBottomNavigationDrawerFragment
 import com.devourer.alexb.diaryforthecoolestboys.Fragments.SettingsBottomNavigationDrawerFragment
 import com.github.okdroid.checkablechipview.CheckableChipView
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 import com.devourer.alexb.diaryforthecoolestboys.FingerprintLibrary.AuthenticationCallback
 import com.google.android.material.animation.AnimationUtils.*
+import io.realm.Realm
+import io.realm.RealmConfiguration
+import io.realm.Sort
+import io.realm.kotlin.delete
+import io.realm.kotlin.where
 import jp.wasabeef.recyclerview.adapters.AlphaInAnimationAdapter
 import jp.wasabeef.recyclerview.animators.*
 
@@ -58,11 +58,10 @@ import jp.wasabeef.recyclerview.animators.*
 class MainActivity : AppCompatActivity() {
 
     private var isBarAnimateEnd = true
-    private val mAuth = FirebaseAuth.getInstance()
-    private val myDB = FirebaseFirestore.getInstance()
+    private lateinit var realm: Realm
+    lateinit var mRealmConfiguration: RealmConfiguration
     lateinit var fire: MyFirebase
     var dateAndTime = Calendar.getInstance()!!
-    private lateinit var mGoogleSignInClient: GoogleSignInClient
     lateinit var snackbar: Snackbar
     private var isAdd: Boolean = true
     private var isChange: Boolean = false
@@ -71,42 +70,37 @@ class MainActivity : AppCompatActivity() {
     private var isCompletedListGroupExpanded = false
     private val handler = Handler()
     var mFragmentManager: FragmentManager = fragmentManager
-    private val uId = mAuth.uid!!
-    private val user = mAuth.currentUser!!
-    val name = user.displayName!!
     private var mTasks = ArrayList<Task>()
     private var mCompletedTasks = ArrayList<CompletedTask>()
     var mTaskLists = ArrayList<TaskList>()
     private lateinit var taskListGroupAdapter: TasksRecyclerViewAdapter
     lateinit var completedTasksListGroupAdapter: CompletedTasksRecyclerViewAdapter
-    //Database links
-    private val users = myDB.collection("users")
-    private val uIdDoc = users.document(uId)
-    //
     companion object {
         private const val TAG: String = "Main"
         const val INTENT_ID = "auth"
     }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.w(TAG,"onCreate")
         setContentView(R.layout.activity_main)
         setSupportActionBar(bar)
+        refreshLayout.setColorSchemeResources(R.color.colorAccent)
+        refreshLayout.setProgressBackgroundColorSchemeResource(R.color.colorBottomAppBar)
         fire = MyFirebase(this@MainActivity)
+        mRealmConfiguration = RealmConfiguration.Builder()
+            .name("DiaryFTCB.realm")
+            .schemaVersion(3)
+            .deleteRealmIfMigrationNeeded()
+            .build()
+        Realm.setDefaultConfiguration(mRealmConfiguration)
+        realm = Realm.getDefaultInstance()
+        initRecyclerView()
         initTasksList()
-        onNavItemSelected(NavMenuCheckedItem.title)
+        onNavItemSelected(false)
 
         if (intent.getBooleanExtra(INTENT_ID,false))
             snacks.snack("Authentication access!",Snackbar.LENGTH_LONG,R.color.colorBackSnackbar,"OK",R.color.colorOkActionSnackbar)
-
-
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(getString(R.string.default_web_client_id))
-            .requestEmail()
-            .build()
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
 
         fab.setOnClickListener {
             slideBarUp()
@@ -203,6 +197,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        refreshLayout.setOnRefreshListener {
+            onNavItemSelected(true)
+            refreshLayout.isRefreshing = false
+        }
+
         completedBtn.setOnClickListener { onCompletedBtn() }
 
         contentScrollView.setOnScrollChangeListener { _: NestedScrollView?, _: Int, scrollY: Int, _: Int, oldScrollY: Int ->
@@ -228,15 +227,19 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        initRecyclerView()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        realm.close()
     }
 
     fun signOut() {
         // Firebase sign out
-        mAuth.signOut()
+        fire.mAuth.signOut()
 
         // Google sign out
-        mGoogleSignInClient.signOut().addOnCompleteListener(this) {
+        fire.mGoogleSignInClient.signOut().addOnCompleteListener(this) {
             updateUI(null)
         }
     }
@@ -306,6 +309,7 @@ class MainActivity : AppCompatActivity() {
                 headerView.visibility = View.INVISIBLE
                 headerLineView.visibility = View.INVISIBLE
                 contentScrollView.visibility = View.INVISIBLE
+                refreshLayout.visibility = View.INVISIBLE
                 fab.setImageDrawable(getDrawable(R.drawable.avd_add_to_done))
                 val icon = fab.drawable
                 if(icon is AnimatedVectorDrawable)
@@ -342,6 +346,7 @@ class MainActivity : AppCompatActivity() {
                 headerView.visibility = View.VISIBLE
                 headerLineView.visibility = View.VISIBLE
                 contentScrollView.visibility = View.VISIBLE
+                refreshLayout.visibility = View.VISIBLE
                 taskDetailsEditTextInputLayout.visibility = View.INVISIBLE
                 taskEditTextLayout.visibility = View.INVISIBLE
                 fab.setImageDrawable(getDrawable(R.drawable.avd_done_to_add))
@@ -364,7 +369,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun updateUIWhenTaskTextIsClicked(taskText: String, taskDetailsText: String?, _notificationDate: Any?){
+    private fun updateUIWhenTaskTextIsClicked(taskText: String?, taskDetailsText: String?, _notificationDate: Any?){
         taskEditText.setText(taskText)
         val dateFormat = SimpleDateFormat("yyyy MMMM dd, h:mm a")
         val notificationDate = if (_notificationDate != null) dateFormat.format((_notificationDate as Date).time) else ""
@@ -381,6 +386,7 @@ class MainActivity : AppCompatActivity() {
         headerView.visibility = View.INVISIBLE
         headerLineView.visibility = View.INVISIBLE
         contentScrollView.visibility = View.INVISIBLE
+        refreshLayout.visibility = View.INVISIBLE
         taskEditTextLayout.visibility = View.VISIBLE
         bar.navigationIcon = null
         fab.setImageDrawable(getDrawable(R.drawable.avd_add_to_done))
@@ -396,7 +402,7 @@ class MainActivity : AppCompatActivity() {
         isAdd = false
     }
 
-    fun updateUIWhenCompletedTaskTextIsClicked(taskText: String, taskDetailsText: String?, _notificationDate: Any?){
+    fun updateUIWhenCompletedTaskTextIsClicked(taskText: String?, taskDetailsText: String?, _notificationDate: Any?){
         Log.w(TAG,"paintFlags -> ${taskEditText.paintFlags}")
         taskEditText.paintFlags = Paint.STRIKE_THRU_TEXT_FLAG
         Log.w(TAG,"paintFlags! -> ${taskEditText.paintFlags}")
@@ -424,6 +430,7 @@ class MainActivity : AppCompatActivity() {
         headerView.visibility = View.INVISIBLE
         headerLineView.visibility = View.INVISIBLE
         contentScrollView.visibility = View.INVISIBLE
+        refreshLayout.visibility = View.INVISIBLE
         taskEditTextLayout.visibility = View.VISIBLE
         bar.navigationIcon = null
         fab.setImageDrawable(getDrawable(R.drawable.avd_add_to_done))
@@ -440,29 +447,27 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    fun onNavItemSelected(title: String){
+    fun onNavItemSelected(isSync: Boolean){
         progressBarMain.visibility = View.VISIBLE
         completedBtnLayout.visibility = View.GONE
         tasksListGroup.visibility = View.GONE
         completedTasksListGroup.visibility = View.GONE
         isCompletedListGroupExpanded = false
-        list_name_text.text = title
-        initTasks(title)
+        list_name_text.text = NavMenuCheckedItem.title
+        when (isSync){
+            false -> initTasks()
+            true -> initAllFirebaseTasks()
+        }
     }
 
     private fun initTasksList(){
         mTaskLists.clear()
-        uIdDoc.collection("#$!@#$!@!@#$!@#!3123!@#").orderBy("date").get().addOnCompleteListener {
-            if (it.isSuccessful){
-                Log.w(TAG,"MainActivity | successful get documents of lists")
-                if (it.result!!.documents.isNotEmpty()) {
-                    Log.w(TAG,"MainActivity | documents isn't empty")
-                    for ((i) in (0 until it.result!!.documents.size).withIndex()){
-                        val doc = it.result!!.documents[i]
-                        mTaskLists.add(TaskList(doc["name"] as String, doc["id"] as Long))
-                    }
-                }
-            }
+
+        val taskLists = realm
+            .where<TaskList>()
+            .findAll()
+        taskLists.forEach {
+            mTaskLists.add(it)
         }
     }
 
@@ -474,160 +479,213 @@ class MainActivity : AppCompatActivity() {
     fun deleteTaskList(){
         if (NavMenuCheckedItem.title != "My Tasks") {
             val title = NavMenuCheckedItem.title
-            uIdDoc.collection("#$!@#$!@!@#$!@#!3123!@#").document(title).delete()
-                .addOnCompleteListener {
-                    if (it.isSuccessful) {
-                        NavMenuCheckedItem.title = "My Tasks"
-                        NavMenuCheckedItem.id = R.id.my_tasks_list.toLong()
-                        snacks.snack("List removed", Snackbar.LENGTH_LONG, R.color.colorBackSnackbar)
-                        initRecyclerView()
-                        completedBtnLayout.visibility = View.GONE
-                        progressBarMain.visibility = View.VISIBLE
-                        initTasksList()
-                        initTasks(NavMenuCheckedItem.title)
+            val taskList = realm
+                .where<TaskList>()
+                .`in`("nameOfTaskList", arrayOf(title))
+                .findFirst()
+            val tasks = realm
+                .where<Task>()
+                .`in`("listTitle", arrayOf(title))
+                .findAll()
+            val completedTask = realm
+                .where<CompletedTask>()
+                .`in`("listTitle", arrayOf(title))
+                .findAll()
 
-                    }
-                }
-            uIdDoc.collection(title).get().addOnCompleteListener {
-                if(it.isSuccessful){
-                    it.result!!.documents.forEach { doc ->
-                        doc.reference.delete()
-                    }
-                }
+            realm.executeTransaction{
+                taskList!!.deleteFromRealm()
+                tasks.deleteAllFromRealm()
+                completedTask.deleteAllFromRealm()
             }
+
+            fire.deleteTaskList(title)
+
+            NavMenuCheckedItem.title = "My Tasks"
+            NavMenuCheckedItem.id = R.id.my_tasks_list.toLong()
+            snacks.snack("List removed", Snackbar.LENGTH_LONG, R.color.colorBackSnackbar)
+            initTasksList()
+            onNavItemSelected(false)
         }
         else
-            snacks.snack("You can't delete main list, I don't want it!", Snackbar.LENGTH_LONG, R.color.colorBackSnackbar)
+            snacks.snack("You can't delete main list, I don't want it! ^—^", Snackbar.LENGTH_LONG, R.color.colorBackSnackbar)
     }
 
-    private fun initTasks(title: String){
-        list_name_text.text = NavMenuCheckedItem.title
+    private fun initTasks(){
+        Log.w(TAG, "initTasks")
+        val title = NavMenuCheckedItem.title
+        list_name_text.text = title
         ///////////
         mTasks.clear()
         mCompletedTasks.clear()
         ////////////////////
         Log.w(TAG, "Список очищен")
-
-        uIdDoc.collection(title).orderBy("date",Query.Direction.DESCENDING).get().addOnCompleteListener {
-            if(it.isSuccessful){
-                Log.w(TAG, "it is successful order by date")
-                for ((i) in (0 until it.result!!.size()).withIndex()){
-                    val doc = it.result!!.documents[i]
-                    if (doc.get("key") == false){
-                        //Log.w(TAG,"Внутри условия при key == false")
-                        //Log.w(TAG,"notification_date TYPE -> ${test!!::class.simpleName}")
-                        mTasks.add(Task(
-                            doc.get("text") as String,
-                            doc.get("details_text") as String,
-                            doc.get("date"),
-                            doc.get("notification_date"),
-                            doc.id
-                        ))
-                        //Log.w(TAG,"mTasks[i] -> ${mTasks[i]}")
-                    }
-                }
-
-                uIdDoc.collection(title).orderBy("completion_date",Query.Direction.DESCENDING).get().addOnCompleteListener {
-                    if(it.isSuccessful){
-                        Log.w(TAG, "it is successful order by completion_date")
-                        for ((i) in (0 until it.result!!.size()).withIndex()){
-                            //Log.w(TAG,"initTasks | Внутри for")
-                            val doc = it.result!!.documents[i]
-                            if (doc.get("key") == true){
-                                //Log.w(TAG,"Внутри условия при key == true")
-                                mCompletedTasks.add(CompletedTask(
-                                    doc.get("text") as String,
-                                    doc.get("details_text") as String,
-                                    doc.get("date"),
-                                    doc.get("completion_date"),
-                                    doc.get("notification_date"),
-                                    doc.id
-                                ))
-                                //Log.w(TAG,"mCompletedTasks[i] -> ${mCompletedTasks[i]}")
-                            }
-                        }
-                        progressBarMain.visibility = View.GONE
-                        completedTasksListGroupAdapter.notifyDataSetChanged()
-                        Log.w(TAG,"Обновление адаптера completedTaskList при инициализации таскс")
-                        taskListGroupAdapter.notifyDataSetChanged()
-                        Log.w(TAG,"Обновление адаптера taskList при инициализации таскс")
-                        showCompletedBtn()
-
-                    }
-                    else{
-                        Log.w(TAG, "ERROR initTasks (by completion_date)  -> ${it.exception}")
-                    }
-
-                }
-            }
-            else{
-                Log.w(TAG, "ERROR initTasks (by date) -> ${it.exception}")
-                progressBarMain.visibility = View.GONE
-                snacks.snack("Something went wrong!",Snackbar.LENGTH_LONG,R.color.colorBackSnackbar,"ERROR",R.color.colorErrorActionBar)
-            }
+        if (realm.where<Task>().findAll().isEmpty() && realm.where<CompletedTask>().findAll().isEmpty()){
+            onNavItemSelected(true)
         }
+        else {
+            val sortedTasks = realm
+                .where<Task>()
+                .sort(Task::dateOfTasks.name, Sort.DESCENDING)
+                .`in`("listTitle", arrayOf(title))
+                .findAll()
+            val sortedCompletedTasks = realm
+                .where<CompletedTask>()
+                .sort(CompletedTask::completionDateOfCompletedTask.name, Sort.DESCENDING)
+                .`in`("listTitle", arrayOf(title))
+                .findAll()
 
+            Log.w(
+                TAG,
+                "sortedTasks.size -> ${sortedTasks.size} | sortedCompletedTasks.size -> ${sortedCompletedTasks.size}"
+            )
+            sortedTasks.forEach {
+                mTasks.add(it)
+            }
+            sortedCompletedTasks.forEach {
+                mCompletedTasks.add(it)
+            }
+            Log.w(TAG, "mTasks.size -> ${mTasks.size} | mCompletedTasks.size -> ${mCompletedTasks.size}")
+            progressBarMain.visibility = View.GONE
+            completedTasksListGroupAdapter.notifyDataSetChanged()
+            Log.w(TAG, "Обновление адаптера completedTaskList при инициализации таскс")
+            taskListGroupAdapter.notifyDataSetChanged()
+            Log.w(TAG, "Обновление адаптера taskList при инициализации таскс")
+            showCompletedBtn()
+        }
+    }
+
+    private fun initAllFirebaseTasks() {
+        Log.w(TAG, "initAllFirebaseTasks")
+        val title = NavMenuCheckedItem.title
+        list_name_text.text = title
+        ///////////
+        mTasks.clear()
+        mCompletedTasks.clear()
+        mTaskLists.clear()
+        realm.executeTransactionAsync {
+            it.deleteAll()
+        }
+        ////////////////////
+        Log.w(TAG, "Список очищен")
+        fire.uIdDoc.collection("#$!@#$!@!@#$!@#!3123!@#").orderBy("date").get().addOnCompleteListener {
+            if (it.isSuccessful) {
+                Log.w(TAG, "MainActivity | successful get documents of lists")
+                if (it.result!!.documents.isNotEmpty()) {
+                    Log.w(TAG, "MainActivity | documents isn't empty")
+                    for ((i) in (0 until it.result!!.documents.size).withIndex()) {
+                        val doc = it.result!!.documents[i]
+                        val taskList = TaskList(doc["name"] as String, doc["id"] as Long)
+                        mTaskLists.add(taskList)
+                        realm.executeTransaction {
+                            it.insert(taskList)
+                        }
+                    }
+                }
+            }
+            val tasksList = ArrayList<String>()
+            mTaskLists.forEach {
+                tasksList.add(it.nameOfTaskList)
+            }
+            tasksList.add("My Tasks")
+
+
+            for (list in 0 until tasksList.size) {
+                fire.uIdDoc.collection(tasksList[list]).orderBy("date", Query.Direction.DESCENDING).get()
+                    .addOnCompleteListener {
+                        if (it.isSuccessful) {
+                            Log.w(TAG, "it is successful order by date")
+                            for ((i) in (0 until it.result!!.size()).withIndex()) {
+                                val doc = it.result!!.documents[i]
+                                if (doc.get("key") == false) {
+                                    //Log.w(TAG,"Внутри условия при key == false")
+                                    //Log.w(TAG,"notification_date TYPE -> ${test!!::class.simpleName}")
+                                    val task = Task(
+                                        doc.get("text") as String,
+                                        doc.get("details_text") as String,
+                                        doc.get("date"),
+                                        doc.get("notification_date"),
+                                        doc.id,
+                                        tasksList[list]
+                                    )
+                                    if (tasksList[list] == title)
+                                        mTasks.add(task)
+                                    realm.executeTransaction {
+                                        it.insert(task)
+                                    }
+                                    //Log.w(TAG,"mTasks[i] -> ${mTasks[i]}")
+                                }
+                            }
+
+                            fire.uIdDoc.collection(tasksList[list])
+                                .orderBy("completion_date", Query.Direction.DESCENDING).get().addOnCompleteListener {
+                                if (it.isSuccessful) {
+                                    Log.w(TAG, "it is successful order by completion_date")
+                                    for ((i) in (0 until it.result!!.size()).withIndex()) {
+                                        //Log.w(TAG,"initAllFirebaseTasks | Внутри for")
+                                        val doc = it.result!!.documents[i]
+                                        if (doc.get("key") == true) {
+                                            //Log.w(TAG,"Внутри условия при key == true")
+                                            val completedTask = CompletedTask(
+                                                doc.get("text") as String,
+                                                doc.get("details_text") as String,
+                                                doc.get("date"),
+                                                doc.get("completion_date"),
+                                                doc.get("notification_date"),
+                                                doc.id,
+                                                tasksList[list]
+                                            )
+                                            if (tasksList[list] == title)
+                                                mCompletedTasks.add(completedTask)
+                                            realm.executeTransaction {
+                                                it.insert(completedTask)
+                                            }
+                                            //Log.w(TAG,"mCompletedTasks[i] -> ${mCompletedTasks[i]}")
+                                        }
+                                    }
+                                    when (list) {
+                                        tasksList.size - 1 -> {
+                                            Log.w(
+                                                TAG, "realm task -> ${realm.where<Task>().findAll().size} " +
+                                                        "| realm completed -> ${realm.where<CompletedTask>().findAll().size}"
+                                            )
+                                            progressBarMain.visibility = View.GONE
+                                            completedTasksListGroupAdapter.notifyDataSetChanged()
+                                            Log.w(TAG, "Обновление адаптера completedTaskList при инициализации таскс")
+                                            taskListGroupAdapter.notifyDataSetChanged()
+                                            Log.w(TAG, "Обновление адаптера taskList при инициализации таскс")
+                                            showCompletedBtn()
+                                        }
+                                    }
+
+
+                                } else {
+                                    Log.w(TAG, "ERROR initAllFirebaseTasks (by completion_date)  -> ${it.exception}")
+                                }
+
+                            }
+                        } else {
+                            Log.w(TAG, "ERROR initAllFirebaseTasks (by date) -> ${it.exception}")
+                            progressBarMain.visibility = View.GONE
+                            snacks.snack(
+                                "Something went wrong!",
+                                Snackbar.LENGTH_LONG,
+                                R.color.colorBackSnackbar,
+                                "ERROR",
+                                R.color.colorErrorActionBar
+                            )
+                        }
+                    }
+            }
+
+        }
     }
 
     private fun initRecyclerView(){
-        completedTasksListGroupAdapter = CompletedTasksRecyclerViewAdapter(
-                    this,
-                    mCompletedTasks,
-                    snacks,
-                    object : CompletedAdapterInterface {
-                        override fun taskCompletedImageViewOnClick(
-                            completedTask: CompletedTask,
-                            task: Task,
-                            position: Int
-                        ) {
-                            taskListGroupAdapter.moveTaskFromCompleted(task,0) // add task to TasksListGroup
-                            showCompletedBtnWhenTaskMoved()
-                            snacks.completedSnack(
-                                "Task add to Not Completed",
-                                Snackbar.LENGTH_LONG,
-                                R.color.colorBackSnackbar,
-                                "UNDO",
-                                R.color.colorUNDOActionSnackbar,
-                                completedTask.map,
-                                true,
-                                completedTask.id,
-                                position
-                            )
-                        }
-
-                        override fun completedTaskTextViewOnClick(
-                            taskText: String,
-                            taskDetailsText: String,
-                            notificationDate: Any?,
-                            position: Int
-                        ) {
-                            slideBarUp()
-                            updateUIWhenCompletedTaskTextIsClicked(taskText,taskDetailsText,notificationDate)
-                            isChange = true
-                            isCompleted = true
-                            NavMenuCheckedItem.position = position
-                        }
-
-                    }
-                )
-        completedTasksListGroup.apply {
-            itemAnimator = LandingAnimator()
-            layoutManager = LinearLayoutManager(this@MainActivity)
-        }
-        completedTasksListGroup.adapter = AlphaInAnimationAdapter(completedTasksListGroupAdapter).apply {
-            setDuration(500)
-            setFirstOnly(false)
-        }
-        completedTasksListGroup.itemAnimator?.apply {
-            addDuration = 300
-            changeDuration = 300
-            removeDuration = 300
-            moveDuration = 300
-        }
-        ///////////////////////////////////////////////////////////////////
+        Log.w(TAG, "initRecyclerView")
         taskListGroupAdapter = TasksRecyclerViewAdapter(
             this,
             mTasks,
+            realm,
             snacks,
             object : AdapterInterface {
                 override fun taskNotCompleteImageViewOnClick(
@@ -643,7 +701,7 @@ class MainActivity : AppCompatActivity() {
                         R.color.colorBackSnackbar,
                         "UNDO",
                         R.color.colorUNDOActionSnackbar,
-                        task.map,
+                        task.map(),
                         false,
                         task.id,
                         position
@@ -652,8 +710,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun taskTextViewOnClick(
-                    taskText: String,
-                    taskDetailsText: String,
+                    taskText: String?,
+                    taskDetailsText: String?,
                     notificationDate: Any?,
                     position: Int
                 ) {
@@ -681,6 +739,63 @@ class MainActivity : AppCompatActivity() {
             removeDuration = 300
             moveDuration = 300
         }
+        //////////////////////////////////////////////////////////////////////
+        completedTasksListGroupAdapter = CompletedTasksRecyclerViewAdapter(
+                    this,
+                    mCompletedTasks,
+                    realm,
+                    snacks,
+                    object : CompletedAdapterInterface {
+                        override fun taskCompletedImageViewOnClick(
+                            completedTask: CompletedTask,
+                            task: Task,
+                            position: Int
+                        ) {
+                            taskListGroupAdapter.moveTaskFromCompleted(task,0) // add task to TasksListGroup
+                            showCompletedBtnWhenTaskMoved()
+                            snacks.completedSnack(
+                                "Task add to Not Completed",
+                                Snackbar.LENGTH_LONG,
+                                R.color.colorBackSnackbar,
+                                "UNDO",
+                                R.color.colorUNDOActionSnackbar,
+                                completedTask.map(),
+                                true,
+                                completedTask.id,
+                                position
+                            )
+                        }
+
+                        override fun completedTaskTextViewOnClick(
+                            taskText: String?,
+                            taskDetailsText: String?,
+                            notificationDate: Any?,
+                            position: Int
+                        ) {
+                            slideBarUp()
+                            updateUIWhenCompletedTaskTextIsClicked(taskText,taskDetailsText,notificationDate)
+                            isChange = true
+                            isCompleted = true
+                            NavMenuCheckedItem.position = position
+                        }
+
+                    }
+                )
+        completedTasksListGroup.apply {
+            itemAnimator = LandingAnimator()
+            layoutManager = LinearLayoutManager(this@MainActivity)
+        }
+        completedTasksListGroup.adapter = AlphaInAnimationAdapter(completedTasksListGroupAdapter).apply {
+            setDuration(500)
+            setFirstOnly(false)
+        }
+        completedTasksListGroup.itemAnimator?.apply {
+            addDuration = 300
+            changeDuration = 300
+            removeDuration = 300
+            moveDuration = 300
+        }
+        Log.w(TAG, "initRecyclerView done")
 
     }
 
@@ -942,16 +1057,16 @@ class MainActivity : AppCompatActivity() {
             backColor: Int,
             actionText: String,
             actionColor: Int,
-            taskText: String,
+            taskText: String?,
             taskDate: Any?,
             completionDate: Any?,
-            taskDetailsText: String,
+            taskDetailsText: String?,
             notificationDate: Any?,
-            taskId: String,
+            taskId: String?,
             key: Boolean,
             position: Int
         ) {
-            val task: Any = if(!key) Task(taskText,taskDetailsText,taskDate,notificationDate,taskId) else CompletedTask(taskText,taskDetailsText,taskDate,completionDate,notificationDate,taskId)
+            val task: Any = if(!key) Task(taskText,taskDetailsText,taskDate,notificationDate,taskId,NavMenuCheckedItem.title) else CompletedTask(taskText,taskDetailsText,taskDate,completionDate,notificationDate,taskId, NavMenuCheckedItem.title)
             val screenSize = Point()
             windowManager.defaultDisplay.getSize(screenSize)
             val marginSide = 0
@@ -991,7 +1106,7 @@ class MainActivity : AppCompatActivity() {
             actionColor: Int,
             map: Map<String, Any?>,
             key: Boolean,
-            id: String,
+            id: String?,
             position: Int
         ) {
             val screenSize = Point()
@@ -1015,15 +1130,32 @@ class MainActivity : AppCompatActivity() {
                         completedTasksListGroupAdapter.moveTaskToNotCompleted(0) // delete task from completedTasksListGroup
                         val task = Task(map)
                         task.id = id
+                        task.listTitle = NavMenuCheckedItem.title
+                        val movedTask = realm
+                            .where<CompletedTask>()
+                            .`in`("id", arrayOf(id))
+                            .findFirst()
+                        realm.executeTransaction {
+                            movedTask!!.deleteFromRealm()
+                            it.insert(task)
+                        }
                         taskListGroupAdapter.moveTaskFromCompleted(task, position) // add task to TasksListGroup
                         showCompletedBtnWhenTaskMoved()
                         fire.addTaskToNotCompleted(map, id)
                     }
                     true -> {
                         //Log.w(TAG, "completedSnack | key = true | map -> $map")
-                        taskListGroupAdapter.moveTaskToCompleted(0)
+                        taskListGroupAdapter.moveTaskToCompleted(0) // delete task from TasksListGroup
                         val completedTask = CompletedTask(map)
                         completedTask.id = id
+                        completedTask.listTitle = NavMenuCheckedItem.title
+                        val movedTask = realm
+                            .where<Task>()
+                            .`in`("id", arrayOf(id))
+                            .findFirst()
+                        realm.executeTransaction {
+                            movedTask!!.deleteFromRealm()
+                        }
                         completedTasksListGroupAdapter.addTask(completedTask, position)
                         showCompletedBtnWhenTaskMoved()
                         fire.addTaskToCompleted(id,map["completion_date"])

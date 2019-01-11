@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import io.realm.Realm
 
 class SplashActivity : AppCompatActivity() {
 
@@ -18,6 +19,7 @@ class SplashActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Realm.init(this@SplashActivity)
 
         val mAuth: FirebaseAuth = FirebaseAuth.getInstance()
         val currentUser = mAuth.currentUser

@@ -18,13 +18,13 @@ class MyFirebase (context: Context){
         private const val TAG = "Main"
     }
 
-    private val mAuth = FirebaseAuth.getInstance()
+    val mAuth = FirebaseAuth.getInstance()
     private val myDB = FirebaseFirestore.getInstance()
     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
         .requestIdToken(context.getString(R.string.default_web_client_id))
         .requestEmail()
         .build()
-    private  var mGoogleSignInClient: GoogleSignInClient = GoogleSignIn.getClient(context, gso)
+    var mGoogleSignInClient: GoogleSignInClient = GoogleSignIn.getClient(context, gso)
     private val uId = mAuth.uid!!
     private val user = mAuth.currentUser!!
     val name = user.displayName!!
@@ -35,39 +35,27 @@ class MyFirebase (context: Context){
     val uIdDoc = users.document(uId)
     //
 
-    fun addTask(map: Map<String,Any?>, tasks: ArrayList<Task>){
-
-        uIdDoc.collection(NavMenuCheckedItem.title).add(map).addOnCompleteListener{
-            if (it.isSuccessful){
-                tasks[0].id = it.result!!.id
-                Log.w(TAG, "Добавление таски, id -> ${it.result!!.id}")
-                Log.w(TAG,"Добавление таски в базу Firebase суксесфул")
-
-            }
-        }
-    }
-
-    fun addTask(map: Map<String, Any?>, id: String){
-        uIdDoc.collection(NavMenuCheckedItem.title).document(id).set(map).addOnCompleteListener{
+    fun addTask(map: Map<String, Any?>, id: String?){
+        uIdDoc.collection(NavMenuCheckedItem.title).document(id!!).set(map).addOnCompleteListener{
             if (it.isSuccessful){
                 Log.w(TAG,"Добавление таски в базу Firebase суксесфул")
             }
         }
     }
 
-    fun changeTask(map: Map<String,Any?>, id: String){
+    fun changeTask(map: Map<String,Any?>, id: String?){
         Log.w(TAG,"ID (fire) -> $id")
 
-        uIdDoc.collection(NavMenuCheckedItem.title).document(id).update(map).addOnCompleteListener {
+        uIdDoc.collection(NavMenuCheckedItem.title).document(id!!).update(map).addOnCompleteListener {
             if (it.isSuccessful){
                 Log.w(TAG,"Изменение таски в базе Firebase суксесфул")
             }
         }
     }
 
-    fun deleteTask(id: String){
+    fun deleteTask(id: String?){
 
-        uIdDoc.collection(NavMenuCheckedItem.title).document(id).delete().addOnCompleteListener {
+        uIdDoc.collection(NavMenuCheckedItem.title).document(id!!).delete().addOnCompleteListener {
             if (it.isSuccessful){
                 Log.w(TAG, "Удаление таски в базе Firebase successful")
             }
@@ -77,7 +65,7 @@ class MyFirebase (context: Context){
     fun deleteAllCompletedTasks(completedTasks: ArrayList<CompletedTask>){
 
         for ((i) in (0 until completedTasks.size).withIndex()){
-            uIdDoc.collection(NavMenuCheckedItem.title).document(completedTasks[i].id).delete().addOnCompleteListener {
+            uIdDoc.collection(NavMenuCheckedItem.title).document(completedTasks[i].id!!).delete().addOnCompleteListener {
                 if (it.isSuccessful){
 
                 }
@@ -87,9 +75,9 @@ class MyFirebase (context: Context){
 
     }
 
-    fun addTaskToCompleted(id: String, completionDate: Any?){
+    fun addTaskToCompleted(id: String?, completionDate: Any?){
 
-        uIdDoc.collection(NavMenuCheckedItem.title).document(id).update(
+        uIdDoc.collection(NavMenuCheckedItem.title).document(id!!).update(
             mapOf(
                 "key" to true,
                 "completion_date" to completionDate,
@@ -103,12 +91,44 @@ class MyFirebase (context: Context){
 
     }
 
-    fun addTaskToNotCompleted(map: Map<String, Any?>, id: String){
-        uIdDoc.collection(NavMenuCheckedItem.title).document(id).set(map).addOnCompleteListener {
+    fun addTaskToNotCompleted(map: Map<String, Any?>, id: String?){
+        uIdDoc.collection(NavMenuCheckedItem.title).document(id!!).set(map).addOnCompleteListener {
             if(it.isSuccessful){
                 Log.w(TAG, "Добавление таски в список незавершённых successful")
             }
         }
+    }
+
+
+    fun deleteTaskList(title: String){
+
+        uIdDoc.collection("#$!@#$!@!@#$!@#!3123!@#").document(title).delete()
+            .addOnCompleteListener {
+                if (it.isSuccessful) {
+
+
+                }
+            }
+        uIdDoc.collection(title).get().addOnCompleteListener {
+            if(it.isSuccessful){
+                it.result!!.documents.forEach { doc ->
+                    doc.reference.delete()
+                }
+            }
+        }
+    }
+
+    fun addTaskList(taskListName: String, map: Map<String, Any?>){
+        uIdDoc.collection("#$!@#$!@!@#$!@#!3123!@#").document(taskListName).set(map)
+            .addOnCompleteListener {
+                if (it.isSuccessful) {
+                    Log.w(TAG, "MyFirebase | successful adding list")
+                }
+                else{
+                    Log.w(TAG, "MyFirebase addTaskList ERROR -> ${it.exception}")
+
+                }
+            }
     }
 
 

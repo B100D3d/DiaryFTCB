@@ -15,53 +15,55 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import io.realm.Realm
+import io.realm.kotlin.where
 import kotlinx.android.synthetic.main.activity_add_tasks_list.*
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.collections.RandomAccess
 
 class AddTasksListActivity : AppCompatActivity() {
 
     private lateinit var fire: MyFirebase
     private val handler = Handler()
     private val listsId = ArrayList<Long>()
+    lateinit var realm: Realm
     lateinit var snackbar: Snackbar
     private var rand: Long = 0
 
     companion object {
         private const val TAG = "Main"
-        const val INTENT_ID = "Add_list"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.w(TAG, "AddTasksListActivity onCreate")
         setContentView(R.layout.activity_add_tasks_list)
         fire = MyFirebase(this)
+        realm = Realm.getDefaultInstance()
+        Log.w(TAG, "AddTasksListActivity Realm.getDefaultInstance()")
 
-        fire.uIdDoc.collection("#$!@#$!@!@#$!@#!3123!@#").get().addOnCompleteListener {
-            if (it.isSuccessful) {
-                Log.w(TAG, "AddTasksActivity | successful get documents for they ids")
-                if (it.result!!.documents.isNotEmpty()) {
-                    it.result!!.documents.forEach {
-                        listsId.add(it["id"] as Long)
-                    }
-                    Log.w(TAG, "AddTasksActivity | listsId -> $listsId")
-                    do {
-                        rand = Random().nextInt(5000).toLong()
-                    } while (listsId.contains(rand))
-                    Log.w(TAG, "AddTasksActivity | rand -> $rand")
-                }
-            }
+        val lists = realm
+            .where<TaskList>()
+            .findAll()
+        Log.w(TAG, "AddTasksListActivity findAll()")
+        lists.forEach {
+            listsId.add(it.taskListId)
         }
+        Log.w(TAG, "AddTasksActivity | listsId -> $listsId")
+        do {
+            rand = Random().nextInt(5000).toLong()
+        } while (listsId.contains(rand))
+        Log.w(TAG, "AddTasksActivity | rand -> $rand")
 
-        val t = Thread(Runnable {
+        Thread(Runnable {
             TimeUnit.MILLISECONDS.sleep(300)
             handler.post {
                 addTaskListEditText.requestFocus()
                 val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                 imm.showSoftInput(addTaskListEditText, InputMethodManager.SHOW_IMPLICIT)
             }
-        })
-        t.start()
+        }).start()
 
         addTaskListDoneBtn.setOnClickListener {
             when {
@@ -80,7 +82,7 @@ class AddTasksListActivity : AppCompatActivity() {
                     var view = currentFocus
                     if (view == null)
                         view = View(this)
-                    handler.post {imm.hideSoftInputFromWindow(view.windowToken, 0)}
+                    handler.post {imm.hideSoftInputFromWindow(view!!.windowToken, 0)}
                     TimeUnit.MILLISECONDS.sleep(300)
                     snack("Title name can't be a \".\"", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)
                 }
@@ -120,7 +122,7 @@ class AddTasksListActivity : AppCompatActivity() {
         snackbar.show()
     }
 
-    fun hideKeyboard(){
+    private fun hideKeyboard(){
         Thread(Runnable {
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             var view = currentFocus
@@ -139,24 +141,19 @@ class AddTasksListActivity : AppCompatActivity() {
 
     private fun updateUi() {
         val intent = Intent(this, MainActivity::class.java)
-        fire.uIdDoc.collection("#$!@#$!@!@#$!@#!3123!@#").document(addTaskListEditText.text.toString()).set(
-            mapOf(
-                "name" to addTaskListEditText.text.toString(),
-                "id" to rand,
-                "date" to Date()
-            )
+        val taskListName = addTaskListEditText.text.toString()
+        val taskListMap = mapOf(
+            "name" to taskListName,
+            "id" to rand,
+            "date" to Date()
         )
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    Log.w(TAG, "AddTasksActivity | successful adding list")
-                }
-                else{
-                    Log.w(TAG, "ERROR -> ${it.exception}")
-
-                }
-            }
+        fire.addTaskList(taskListName,taskListMap)
+        val taskList = TaskList(taskListName, rand)
+        realm.executeTransaction {
+            it.insert(taskList)
+        }
         NavMenuCheckedItem.id = rand
-        NavMenuCheckedItem.title = addTaskListEditText.text.toString()
+        NavMenuCheckedItem.title = taskListName
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         var view = currentFocus
         if (view == null)

@@ -6,12 +6,12 @@ import com.devourer.alexb.diaryforthecoolestboys.Task
 
 interface AdapterInterface {
     fun taskNotCompleteImageViewOnClick(task: Task, completionDate: Any?, position: Int)
-    fun taskTextViewOnClick(taskText: String, taskDetailsText: String, notificationDate: Any?, position: Int)
+    fun taskTextViewOnClick(taskText: String?, taskDetailsText: String?, notificationDate: Any?, position: Int)
 }
 
 interface CompletedAdapterInterface{
     fun taskCompletedImageViewOnClick(completedTask: CompletedTask, task: Task, position: Int)
-    fun completedTaskTextViewOnClick(taskText: String, taskDetailsText: String, notificationDate: Any?, position: Int)
+    fun completedTaskTextViewOnClick(taskText: String?, taskDetailsText: String?, notificationDate: Any?, position: Int)
 }
 
 interface Snacks{
@@ -34,12 +34,12 @@ interface Snacks{
         backColor: Int,
         actionText: String,
         actionColor: Int,
-        taskText: String,
+        taskText: String?,
         taskDate: Any?,
         completionDate: Any?,
-        taskDetailsText: String,
+        taskDetailsText: String?,
         notificationDate: Any?,
-        taskId: String,
+        taskId: String?,
         key: Boolean,
         position: Int)
 
@@ -51,7 +51,7 @@ interface Snacks{
         actionColor: Int,
         map: Map<String, Any?>,
         key: Boolean,
-        id: String,
+        id: String?,
         position: Int)
 
 

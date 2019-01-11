@@ -197,10 +197,16 @@
 
     </View>
 
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/refreshLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="102dp"
+>
+
 
     <androidx.core.widget.NestedScrollView
             android:id="@+id/contentScrollView"
-            android:layout_marginTop="102dp"
             android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
@@ -273,6 +279,7 @@
 
 
     </androidx.core.widget.NestedScrollView>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
         <com.devourer.alexb.diaryforthecoolestboys.Snowfall.SnowfallView
                 android:layout_width="match_parent"

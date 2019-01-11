@@ -9,10 +9,10 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.devourer.alexb.diaryforthecoolestboys.MyFirebase
-import com.devourer.alexb.diaryforthecoolestboys.R
-import com.devourer.alexb.diaryforthecoolestboys.Task
+import com.devourer.alexb.diaryforthecoolestboys.*
 import com.google.android.material.snackbar.Snackbar
+import io.realm.Realm
+import io.realm.kotlin.where
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
@@ -21,6 +21,7 @@ import kotlin.collections.ArrayList
 class TasksRecyclerViewAdapter(
     private val mContext: Context,
     _tasks: ArrayList<Task>,
+    _realm: Realm,
     _snackInterface: Snacks,
     _adapterInterface: AdapterInterface
 ) : RecyclerView.Adapter<TasksRecyclerViewAdapter.ViewHolder>() {
@@ -30,12 +31,14 @@ class TasksRecyclerViewAdapter(
         private const val TAG: String = "Main"
     }
     private var fire: MyFirebase = MyFirebase(mContext)
+    var realm: Realm
     private var mTasks = ArrayList<Task>()
     private var mAdapterInterface: AdapterInterface = _adapterInterface
     private var mSnackInterface: Snacks = _snackInterface
 
     init {
         mTasks = _tasks
+        realm = _realm
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -69,7 +72,7 @@ class TasksRecyclerViewAdapter(
         holder.taskNotCompleteImageView.setOnClickListener {
 
             val position = holder.adapterPosition
-            val task = mTasks[position]
+            val task = Task(mTasks[position])
             val completionDate = Date()
             addTaskToCompleted(position, completionDate, mSnackInterface) // remove task from this list and add to firestore
             mAdapterInterface.taskNotCompleteImageViewOnClick(task, completionDate, position)
@@ -108,14 +111,19 @@ class TasksRecyclerViewAdapter(
     fun addTask(isAdd: Boolean, _taskText: String?, _taskDetailsText: String?, _dateAndTime: Calendar, isChipChecked: Boolean, snackInterface: Snacks){
         if (!isAdd){
             if (!_taskText.isNullOrEmpty()) {
+                val id = fire.uIdDoc.collection(NavMenuCheckedItem.title).document().id
+                Log.w(TAG, "id -> $id")
                 val taskDetailsText = if (_taskDetailsText.isNullOrBlank()) "" else _taskDetailsText
                 val date = Date()
                 val notificationDate = if (isChipChecked) _dateAndTime.time else null
-                val newTask = Task(_taskText, taskDetailsText, date, notificationDate)
+                val newTask = Task(_taskText, taskDetailsText, date, notificationDate,id,NavMenuCheckedItem.title)
                 mTasks.add(0, newTask)
                 notifyItemInserted(0)
+                realm.executeTransaction {
+                    it.insert(newTask)
+                }
                 snackInterface.snack("Task added", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)
-                fire.addTask(newTask.map, mTasks)
+                fire.addTask(newTask.map(), id)
             }
         }
 
@@ -124,7 +132,10 @@ class TasksRecyclerViewAdapter(
     fun addTask(task: Any, position: Int){
         mTasks.add(position, task as Task)
         notifyItemInserted(position)
-        fire.addTask(task.map, task.id)
+        realm.executeTransaction {
+            it.insert(task)
+        }
+        fire.addTask(task.map(), task.id)
     }
 
     fun moveTaskFromCompleted(task: Task, position: Int){
@@ -159,30 +170,56 @@ class TasksRecyclerViewAdapter(
                 _dateAndTime.time
             }
             else null
-        val changedTask = Task(taskEditText, taskDetailsEditText, date, changedNotificationDate, id)
+        val changedTask = Task(taskEditText, taskDetailsEditText, date, changedNotificationDate, id, NavMenuCheckedItem.title)
         if ((taskEditText != mTasks[position].taskText || taskDetailsEditText != mTasks[position].taskDetailsText || changedNotificationDate != _notificationDate) && !taskEditText.isNullOrEmpty()) {
             mTasks[position] = changedTask
             notifyItemChanged(position)
+            val task = realm
+                .where<Task>()
+                .`in`("id", arrayOf(id))
+                .findFirst()
+            realm.executeTransaction {
+                task!!.taskText = taskEditText
+                task.taskDetailsText = taskDetailsEditText
+                task.dateOfTasks = date
+                task.notificationDateOfTask = if(changedNotificationDate != null) changedNotificationDate as Date else null
+                task.id = id
+            }
             snackInterface.snack("Task changed", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)
             Log.w(TAG,"ID -> ${mTasks[position].id}")
-            fire.changeTask(mTasks[position].map, mTasks[position].id)
+            fire.changeTask(mTasks[position].map(), mTasks[position].id)
 
         }
 
     }
 
     private fun addTaskToCompleted(position: Int, _completionDate: Any?, snackInterface: Snacks){
-        val task = mTasks[position]
+        val task = Task(mTasks[position])
         mTasks.removeAt(position)
         notifyItemRemoved(position)
+        val completedTask = realm
+            .where<Task>()
+            .`in`("id", arrayOf(task.id))
+            .findFirst()
+        realm.executeTransaction {
+            completedTask!!.deleteFromRealm()
+            it.insert(CompletedTask(task,_completionDate as Date))
+        }
         fire.addTaskToCompleted(task.id, _completionDate)
 
     }
 
     fun deleteTask(position: Int, snackInterface: Snacks){
-        val task = mTasks[position]
+        val task = Task(mTasks[position])
         mTasks.removeAt(position)
         notifyItemRemoved(position)
+        val deletedTask = realm
+            .where<Task>()
+            .`in`("id", arrayOf(task.id))
+            .findFirst()
+        realm.executeTransaction {
+            deletedTask!!.deleteFromRealm()
+        }
         snackInterface.removedSnack(
             "Task removed",
             Snackbar.LENGTH_LONG,
@@ -203,21 +240,21 @@ class TasksRecyclerViewAdapter(
     }
 
     private fun setTaskText(holder: ViewHolder, position: Int){
-        if (mTasks[position].taskText.length > 55){
+        if (mTasks[position].taskText!!.length > 55){
             var temp = ""
             for (i in 0..54){
-                temp += mTasks[position].taskText[i]
+                temp += mTasks[position].taskText!![i]
             }
             temp += "..."
             holder.taskText.text = temp
         }
-        else if (mTasks[position].taskText.contains("\n")){
+        else if (mTasks[position].taskText!!.contains("\n")){
             var temp = ""
-            for (i in 0 until mTasks[position].taskText.length){
-                val it: String = mTasks[position].taskText[i].toString()
+            for (i in 0 until mTasks[position].taskText!!.length){
+                val it: String = mTasks[position].taskText!![i].toString()
                 if (it == "\n")
                     break
-                temp += mTasks[position].taskText[i]
+                temp += mTasks[position].taskText!![i]
             }
             temp += "..."
             holder.taskText.text = temp
@@ -230,20 +267,20 @@ class TasksRecyclerViewAdapter(
         holder.taskDetailsText.visibility = View.GONE
         if (!mTasks[position].taskDetailsText.isNullOrBlank()) {
             holder.taskDetailsText.visibility = View.VISIBLE
-            if (mTasks[position].taskDetailsText.length > 55) {
+            if (mTasks[position].taskDetailsText!!.length > 55) {
                 var temp = ""
                 for (i in 0..54) {
-                    temp += mTasks[position].taskDetailsText[i]
+                    temp += mTasks[position].taskDetailsText!![i]
                 }
                 temp += "..."
                 holder.taskDetailsText.text = temp
-            } else if (mTasks[position].taskDetailsText.contains("\n")) {
+            } else if (mTasks[position].taskDetailsText!!.contains("\n")) {
                 var temp = ""
-                for (i in 0 until mTasks[position].taskDetailsText.length) {
-                    val it: String = mTasks[position].taskDetailsText[i].toString()
+                for (i in 0 until mTasks[position].taskDetailsText!!.length) {
+                    val it: String = mTasks[position].taskDetailsText!![i].toString()
                     if (it == "\n")
                         break
-                    temp += mTasks[position].taskDetailsText[i]
+                    temp += mTasks[position].taskDetailsText!![i]
                 }
                 temp += "..."
                 holder.taskDetailsText.text = temp

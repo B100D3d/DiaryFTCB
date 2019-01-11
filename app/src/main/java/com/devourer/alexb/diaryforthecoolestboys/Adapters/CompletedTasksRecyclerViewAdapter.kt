@@ -14,6 +14,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.devourer.alexb.diaryforthecoolestboys.*
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
+import io.realm.Realm
+import io.realm.kotlin.where
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
@@ -21,6 +23,7 @@ import kotlin.collections.ArrayList
 class CompletedTasksRecyclerViewAdapter(
     private val mContext: Context,
     _completedTasks: ArrayList<CompletedTask>,
+    _realm: Realm,
     _snackInterface: Snacks,
     _completedAdapterInterface: CompletedAdapterInterface
 ) : RecyclerView.Adapter<CompletedTasksRecyclerViewAdapter.ViewHolder>() {
@@ -31,6 +34,7 @@ class CompletedTasksRecyclerViewAdapter(
     private var isExpanded = false
     private var mCompletedTasks = ArrayList<CompletedTask>()
     private var fire: MyFirebase = MyFirebase(mContext)
+    var realm: Realm
     var mSnackInterface: Snacks
     var mAdapterInterface: CompletedAdapterInterface
 
@@ -38,6 +42,7 @@ class CompletedTasksRecyclerViewAdapter(
         mCompletedTasks = _completedTasks
         mAdapterInterface = _completedAdapterInterface
         mSnackInterface = _snackInterface
+        realm = _realm
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -62,14 +67,8 @@ class CompletedTasksRecyclerViewAdapter(
         //Log.w(TAG,"!!!!!!mTasksDate -> $mTasksDate")
         holder.taskCompletedImageView.setOnClickListener {
             val position = holder.adapterPosition
-            val completedTask = mCompletedTasks[position]
-            val task = Task(
-                completedTask.completedTaskText,
-                completedTask.completedTaskDetailsText,
-                Date(),
-                completedTask.notificationDateOfCompletedTask,
-                completedTask.id
-            )
+            val completedTask = CompletedTask(mCompletedTasks[position])
+            val task = Task(completedTask)
             addTaskToNotCompleted(task, position)
             mAdapterInterface.taskCompletedImageViewOnClick(completedTask, task, position)
         }
@@ -108,7 +107,7 @@ class CompletedTasksRecyclerViewAdapter(
     }
 
     fun addTask(task: Task, completionDate: Any?){
-        val completedTask = CompletedTask(task.taskText,task.taskDetailsText,task.dateOfTasks, completionDate, task.notificationDateOfTask, task.id)
+        val completedTask = CompletedTask(task, completionDate as Date)
         mCompletedTasks.add(0, completedTask)
         notifyItemInserted(0)
     }
@@ -116,7 +115,10 @@ class CompletedTasksRecyclerViewAdapter(
     fun addTask(completedTask: Any, position: Int){
         mCompletedTasks.add(position, completedTask as CompletedTask)
         notifyItemInserted(position)
-        fire.addTask(completedTask.map,completedTask.id)
+        realm.executeTransaction {
+            it.insert(completedTask)
+        }
+        fire.addTask(completedTask.map(),completedTask.id)
 
     }
 
@@ -129,16 +131,31 @@ class CompletedTasksRecyclerViewAdapter(
     private fun addTaskToNotCompleted(task: Task, position: Int){
         mCompletedTasks.removeAt(position)
         notifyItemRemoved(position)
+        val deletedTask = realm
+            .where<CompletedTask>()
+            .`in`("id", arrayOf(task.id))
+            .findFirst()
+        realm.executeTransaction {
+            deletedTask!!.deleteFromRealm()
+            it.insert(task)
+        }
         if (mCompletedTasks.isEmpty())
             isExpanded = false
-        fire.addTaskToNotCompleted(task.map,task.id)
+        fire.addTaskToNotCompleted(task.map(),task.id)
 
     }
 
     fun deleteCompletedTask(position: Int){
-        val completedTask = mCompletedTasks[position]
+        val completedTask = CompletedTask(mCompletedTasks[position])
         mCompletedTasks.removeAt(position)
         notifyItemRemoved(position)
+        val deletedCompletedTask = realm
+            .where<CompletedTask>()
+            .`in`("id", arrayOf(completedTask.id))
+            .findFirst()
+        realm.executeTransaction {
+            deletedCompletedTask!!.deleteFromRealm()
+        }
         mSnackInterface.removedSnack(
             "Task removed",
             Snackbar.LENGTH_LONG,
@@ -164,25 +181,32 @@ class CompletedTasksRecyclerViewAdapter(
         }
         mCompletedTasks.clear()
         notifyItemRangeRemoved(0,mCompletedTasks.size)
+        val deletedCompletedTasks = realm.
+            where<CompletedTask>()
+            .`in`("listTitle", arrayOf(NavMenuCheckedItem.title))
+            .findAll()
+        realm.executeTransaction {
+            deletedCompletedTasks.deleteAllFromRealm()
+        }
         fire.deleteAllCompletedTasks(completedTasks)
     }
 
     private fun setTaskText(holder: ViewHolder, position: Int){
-        if (mCompletedTasks[position].completedTaskText.length > 55){
+        if (mCompletedTasks[position].completedTaskText!!.length > 55){
             var temp = ""
             for (i in 0..54){
-                temp += mCompletedTasks[position].completedTaskText[i]
+                temp += mCompletedTasks[position].completedTaskText!![i]
             }
             temp += "..."
             holder.completedTaskText.text = temp
         }
-        else if (mCompletedTasks[position].completedTaskText.contains("\n")){
+        else if (mCompletedTasks[position].completedTaskText!!.contains("\n")){
             var temp = ""
-            for (i in 0 until mCompletedTasks[position].completedTaskText.length){
-                val it: String = mCompletedTasks[position].completedTaskText[i].toString()
+            for (i in 0 until mCompletedTasks[position].completedTaskText!!.length){
+                val it: String = mCompletedTasks[position].completedTaskText!![i].toString()
                 if (it == "\n")
                     break
-                temp += mCompletedTasks[position].completedTaskText[i]
+                temp += mCompletedTasks[position].completedTaskText!![i]
             }
             temp += "..."
             holder.completedTaskText.text = temp
@@ -195,20 +219,20 @@ class CompletedTasksRecyclerViewAdapter(
         holder.completedTaskDetailsText.visibility = View.GONE
         if (!mCompletedTasks[position].completedTaskDetailsText.isNullOrBlank()) {
             holder.completedTaskDetailsText.visibility = View.VISIBLE
-            if (mCompletedTasks[position].completedTaskDetailsText.length > 55) {
+            if (mCompletedTasks[position].completedTaskDetailsText!!.length > 55) {
                 var temp = ""
                 for (i in 0..54) {
-                    temp += mCompletedTasks[position].completedTaskDetailsText[i]
+                    temp += mCompletedTasks[position].completedTaskDetailsText!![i]
                 }
                 temp += "..."
                 holder.completedTaskDetailsText.text = temp
-            } else if (mCompletedTasks[position].completedTaskDetailsText.contains("\n")) {
+            } else if (mCompletedTasks[position].completedTaskDetailsText!!.contains("\n")) {
                 var temp = ""
-                for (i in 0 until mCompletedTasks[position].completedTaskDetailsText.length) {
-                    val it: String = mCompletedTasks[position].completedTaskDetailsText[i].toString()
+                for (i in 0 until mCompletedTasks[position].completedTaskDetailsText!!.length) {
+                    val it: String = mCompletedTasks[position].completedTaskDetailsText!![i].toString()
                     if (it == "\n")
                         break
-                    temp += mCompletedTasks[position].completedTaskDetailsText[i]
+                    temp += mCompletedTasks[position].completedTaskDetailsText!![i]
                 }
                 temp += "..."
                 holder.completedTaskDetailsText.text = temp

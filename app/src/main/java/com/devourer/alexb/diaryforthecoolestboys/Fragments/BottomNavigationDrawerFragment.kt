@@ -73,7 +73,7 @@ class BottomNavigationDrawerFragment: BottomSheetDialogFragment() {
             }*/
             NavMenuCheckedItem.id = menuItem.itemId.toLong()
             NavMenuCheckedItem.title = menuItem.title as String
-            mainActivity.onNavItemSelected(NavMenuCheckedItem.title)
+            mainActivity.onNavItemSelected(false)
             dismiss()
             true
         }
