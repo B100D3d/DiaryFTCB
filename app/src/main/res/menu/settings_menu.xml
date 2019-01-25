@@ -15,7 +15,10 @@
     <group>
         <item android:title="About app">
             <menu>
-                <item android:title="Click"/>
+                <item
+                        android:title="Click"
+                        android:id="@+id/click"
+                />
             </menu>
         </item>
     </group>

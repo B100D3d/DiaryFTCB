@@ -18,7 +18,9 @@
     <androidx.core.widget.NestedScrollView
             android:id="@+id/editScrollView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:visibility="gone"
+    >
 
         <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/taskEditTextLayout"
@@ -28,7 +30,7 @@
                 android:layout_marginBottom="90dp"
                 android:layout_marginEnd="10dp"
                 android:layout_marginStart="20dp"
-                android:visibility="invisible">
+                android:visibility="visible">
 
 
             <com.google.android.material.textfield.TextInputLayout
@@ -36,6 +38,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/taskEditTextHint"
+                    android:visibility="visible"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent"
                     android:layout_marginStart="8dp" app:layout_constraintEnd_toEndOf="parent"
@@ -145,22 +148,15 @@
     </androidx.core.widget.NestedScrollView>
 
 
-
-    <com.github.glomadrian.loadingballs.BallView
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:visibility="gone"
-            android:id="@+id/progressBarMain"
-            lib:balls="3"
-            lib:movement_cycle_time="1500"
-            lib:enable_size_animation="true"
-            lib:size_cycle_time="500"
-            lib:min_ball_size="5dp"
-            lib:max_ball_size="12dp"
-            lib:ball_colors="@array/colors"
-            android:layout_gravity="center"
-
-    />
+        <com.airbnb.lottie.LottieAnimationView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/progressBarMain"
+                android:layout_gravity="center"
+                app:lottie_fileName="loader.json"
+                app:lottie_loop="true"
+                android:visibility="gone"
+        />
 
     <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/headerView"
@@ -324,6 +320,7 @@
             android:layout_gravity="bottom"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/snackbarLayout"/>
+            android:id="@+id/snackbarLayout"
+    />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

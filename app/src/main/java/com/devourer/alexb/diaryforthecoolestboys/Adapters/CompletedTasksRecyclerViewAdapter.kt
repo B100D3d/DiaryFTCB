@@ -1,5 +1,6 @@
 package com.devourer.alexb.diaryforthecoolestboys.Adapters
 
+import android.animation.Animator
 import android.content.Context
 import android.graphics.Paint
 import android.util.Log
@@ -9,10 +10,9 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
+import com.airbnb.lottie.LottieAnimationView
 import com.devourer.alexb.diaryforthecoolestboys.*
-import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
 import io.realm.Realm
 import io.realm.kotlin.where
@@ -21,9 +21,10 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 class CompletedTasksRecyclerViewAdapter(
-    private val mContext: Context,
+    mContext: Context,
     _completedTasks: ArrayList<CompletedTask>,
     _realm: Realm,
+    _data: MyData,
     _snackInterface: Snacks,
     _completedAdapterInterface: CompletedAdapterInterface
 ) : RecyclerView.Adapter<CompletedTasksRecyclerViewAdapter.ViewHolder>() {
@@ -33,7 +34,8 @@ class CompletedTasksRecyclerViewAdapter(
     }
     private var isExpanded = false
     private var mCompletedTasks = ArrayList<CompletedTask>()
-    private var fire: MyFirebase = MyFirebase(mContext)
+    private var fire: MyFirebase = MyFirebase(mContext,_data)
+    private var data: MyData
     var realm: Realm
     var mSnackInterface: Snacks
     var mAdapterInterface: CompletedAdapterInterface
@@ -43,6 +45,7 @@ class CompletedTasksRecyclerViewAdapter(
         mAdapterInterface = _completedAdapterInterface
         mSnackInterface = _snackInterface
         realm = _realm
+        data = _data
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -57,20 +60,36 @@ class CompletedTasksRecyclerViewAdapter(
         setTaskText(holder,position)
         setTasksDetailsText(holder,position)
         setNotificationDateChip(holder,position)
-        Log.w(TAG, "CompletedTasks onBindViewHolder $position")
+        //Log.w(TAG, "CompletedTasks onBindViewHolder $position")
 
     }
 
     override fun onViewAttachedToWindow(holder: ViewHolder) {
         super.onViewAttachedToWindow(holder)
+        holder.taskCompletedImageAnim.speed = -1.5f
 
         //Log.w(TAG,"!!!!!!mTasksDate -> $mTasksDate")
         holder.taskCompletedImageView.setOnClickListener {
-            val position = holder.adapterPosition
-            val completedTask = CompletedTask(mCompletedTasks[position])
-            val task = Task(completedTask)
-            addTaskToNotCompleted(task, position)
-            mAdapterInterface.taskCompletedImageViewOnClick(completedTask, task, position)
+            holder.taskCompletedImageView.visibility = View.GONE
+            holder.taskCompletedImageAnim.visibility = View.VISIBLE
+            holder.taskCompletedImageAnim.playAnimation()
+            holder.taskCompletedImageAnim.addAnimatorListener(object : Animator.AnimatorListener{
+                override fun onAnimationRepeat(animation: Animator?) {}
+                override fun onAnimationEnd(animation: Animator?) {
+                    holder.taskCompletedImageAnim.removeAllAnimatorListeners()
+                    holder.taskCompletedImageAnim.clearAnimation()
+                    val position = holder.adapterPosition
+                    val completedTask = CompletedTask(mCompletedTasks[position])
+                    val task = Task(completedTask)
+                    task.dateOfTasks = Date()
+                    addTaskToNotCompleted(task, position)
+                    mAdapterInterface.taskCompletedImageViewOnClick(completedTask, task, position)
+                    holder.taskCompletedImageView.visibility = View.VISIBLE
+                    holder.taskCompletedImageAnim.visibility = View.GONE
+                }
+                override fun onAnimationCancel(animation: Animator?) {}
+                override fun onAnimationStart(animation: Animator?) {}
+            })
         }
 
         holder.completeTaskTextLayout.setOnClickListener {
@@ -98,6 +117,7 @@ class CompletedTasksRecyclerViewAdapter(
         var parentLayout: LinearLayout = itemView.findViewById(R.id.parent_layout_)
         //var taskCompletedImageLayout: LinearLayout = itemView.findViewById(R.id.taskCompletedImageLayout)
         var taskCompletedImageView: ImageView = itemView.findViewById(R.id.taskCompletedImage)
+        var taskCompletedImageAnim: LottieAnimationView = itemView.findViewById(R.id.taskCompletedImageAnim)
         var completeTaskTextLayout: LinearLayout = itemView.findViewById(R.id.completeTaskTextLayout)
 
     }
@@ -183,7 +203,7 @@ class CompletedTasksRecyclerViewAdapter(
         notifyItemRangeRemoved(0,mCompletedTasks.size)
         val deletedCompletedTasks = realm.
             where<CompletedTask>()
-            .`in`("listTitle", arrayOf(NavMenuCheckedItem.title))
+            .`in`("listTitle", arrayOf(data.title))
             .findAll()
         realm.executeTransaction {
             deletedCompletedTasks.deleteAllFromRealm()

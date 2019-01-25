@@ -3,11 +3,8 @@ package com.devourer.alexb.diaryforthecoolestboys
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import io.realm.Realm
 
 class SplashActivity : AppCompatActivity() {

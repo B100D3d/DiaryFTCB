@@ -13,15 +13,39 @@
             android:layout_marginTop="25dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
-
-        <ImageView
-                android:contentDescription="Circle"
-                android:id="@+id/taskCompletedImage"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:srcCompat="@drawable/ic_done_blue_20dp"
+        <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_gravity="center"
-                android:layout_marginStart="20dp"/>
+                android:layout_marginStart="10dp"
+        >
+            <ImageView
+                    android:contentDescription="Circle"
+                    android:id="@+id/taskCompletedImage"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    app:srcCompat="@drawable/ic_done_blue_20dp"
+                    android:visibility="visible"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+            />
+            <com.airbnb.lottie.LottieAnimationView
+                    android:contentDescription="Circle"
+                    android:id="@+id/taskCompletedImageAnim"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    app:lottie_loop="false"
+                    app:lottie_fileName="uncheck.json"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+            />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
 
         <LinearLayout

@@ -28,12 +28,15 @@
         <activity
                 android:name=".LoginActivity"
                 android:screenOrientation="portrait"
-                android:theme="@style/LoginAppTheme">
+                android:theme="@style/LoginAppTheme"
+        >
         </activity>
         <activity
                 android:name=".MainActivity"
                 android:screenOrientation="portrait"
-                android:theme="@style/MainAppTheme">
+                android:theme="@style/MainAppTheme"
+
+        >
         </activity>
         <activity
                 android:name=".AddTasksListActivity"

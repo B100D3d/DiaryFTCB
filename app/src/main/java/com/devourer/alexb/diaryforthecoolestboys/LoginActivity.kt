@@ -46,6 +46,7 @@ class LoginActivity : AppCompatActivity() {
 
         signInButton.setOnClickListener {
             progressBar.visibility = ProgressBar.VISIBLE
+            progressBar.playAnimation()
             Thread(Runnable {
                 TimeUnit.MILLISECONDS.sleep(1000)
                 handler.post { signIn() }
@@ -57,6 +58,7 @@ class LoginActivity : AppCompatActivity() {
 
     public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        progressBar.pauseAnimation()
         progressBar.visibility = ProgressBar.INVISIBLE
         // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
         if (requestCode == RC_SIGN_IN) {

@@ -2,10 +2,8 @@ package com.devourer.alexb.diaryforthecoolestboys.Fragments
 
 
 import android.app.Dialog
-import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -19,17 +17,17 @@ import com.devourer.alexb.diaryforthecoolestboys.MyFirebase
 import com.devourer.alexb.diaryforthecoolestboys.R
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.android.synthetic.main.fragment_bottomsheet.*
-import com.devourer.alexb.diaryforthecoolestboys.NavMenuCheckedItem
+import com.devourer.alexb.diaryforthecoolestboys.MyData
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.internal.NavigationMenuView
 import com.google.android.material.navigation.NavigationView
-import kotlin.collections.ArrayList
 
 
 class BottomNavigationDrawerFragment: BottomSheetDialogFragment() {
 
     lateinit var fire: MyFirebase
+    lateinit var data: MyData
 
     companion object {
         private const val TAG = "Main"
@@ -42,9 +40,9 @@ class BottomNavigationDrawerFragment: BottomSheetDialogFragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        //initViews()
         val mainActivity = activity as MainActivity
-        fire = MyFirebase(mainActivity)
+        data = mainActivity.data
+        fire = mainActivity.fire
         initMenus(mainActivity)
         if (mainActivity.mTaskLists.size > 4){
             val param = navigation_view.layoutParams
@@ -55,24 +53,12 @@ class BottomNavigationDrawerFragment: BottomSheetDialogFragment() {
             )
             param.height = px.toInt()
         }
-        //navigation_view_layout.clipToOutline = true
-        //navigation_view.clipToOutline = true
         setProfileInfo(fire.name, fire.email, fire.photoUrl)
-        val id: Long = NavMenuCheckedItem.id
+        val id: Long = data.id
         navigation_view.setCheckedItem(id.toInt())
-
         navigation_view.setNavigationItemSelectedListener { menuItem ->
-            //navigation_view.setCheckedItem(menuItem.itemId)
-            //Log.w(TAG,"menuItem.itemId -> ${menuItem.itemId} ")
-            /*if(menuItem.itemId!=R.id.create_new_list && menuItem.itemId!=R.id.show_statistick) {
-
-            }
-            when(menuItem.itemId){
-                R.id.create_new_list -> { mainActivity.createNewTasksList() }
-                R.id.show_statistick -> { }
-            }*/
-            NavMenuCheckedItem.id = menuItem.itemId.toLong()
-            NavMenuCheckedItem.title = menuItem.title as String
+            data.id = menuItem.itemId.toLong()
+            data.title = menuItem.title as String
             mainActivity.onNavItemSelected(false)
             dismiss()
             true
@@ -82,7 +68,6 @@ class BottomNavigationDrawerFragment: BottomSheetDialogFragment() {
         createNewListBtn.setOnClickListener {
             dismiss()
             mainActivity.createNewTasksList() }
-
 
 
         disableNavigationViewScrollbars(navigation_view)

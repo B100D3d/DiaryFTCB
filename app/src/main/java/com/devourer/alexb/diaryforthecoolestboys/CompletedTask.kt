@@ -1,7 +1,6 @@
 package com.devourer.alexb.diaryforthecoolestboys
 
 import io.realm.RealmObject
-import io.realm.annotations.Required
 import java.util.*
 
 open class CompletedTask() : RealmObject() {
@@ -13,7 +12,6 @@ open class CompletedTask() : RealmObject() {
     var completionDateOfCompletedTask: Date? = null
     var notificationDateOfCompletedTask: Date? = null
     var id: String? = ""
-    //var map: Map<String,Any?> = mapOf()
 
     constructor(_completedTaskText: String?,
                 _completedTaskDetailsText: String?,
@@ -30,35 +28,6 @@ open class CompletedTask() : RealmObject() {
         notificationDateOfCompletedTask = if(_notificationDateOfCompletedTask != null) _notificationDateOfCompletedTask as Date else null
         id = _id
         listTitle = _title
-        /*map = mapOf(
-            "text" to completedTaskText,
-            "details_text" to completedTaskDetailsText,
-            "date" to dateOfCompletedTask,
-            "completion_date" to completionDateOfCompletedTask,
-            "notification_date" to notificationDateOfCompletedTask,
-            "key" to true
-        )*/
-    }
-
-    constructor(_completedTaskText: String?,
-                _completedTaskDetailsText: String?,
-                _dateOfCompletedTask: Any?,
-                _completedDateOfCompletedTask: Any?,
-                _notificationDateOfCompletedTask: Any?) : this() {
-
-        completedTaskText = _completedTaskText
-        completedTaskDetailsText = _completedTaskDetailsText
-        dateOfCompletedTask = _dateOfCompletedTask as Date
-        completionDateOfCompletedTask = _completedDateOfCompletedTask as Date
-        notificationDateOfCompletedTask = if(_notificationDateOfCompletedTask != null) _notificationDateOfCompletedTask as Date else null
-        /*map = mapOf(
-            "text" to completedTaskText,
-            "details_text" to completedTaskDetailsText,
-            "date" to dateOfCompletedTask,
-            "completion_date" to completionDateOfCompletedTask,
-            "notification_date" to notificationDateOfCompletedTask,
-            "key" to true
-        )*/
     }
 
     constructor(_map: Map<String,Any?>) : this() {
@@ -67,7 +36,6 @@ open class CompletedTask() : RealmObject() {
         dateOfCompletedTask = _map["date"] as Date
         completionDateOfCompletedTask = _map["completion_date"] as Date
         notificationDateOfCompletedTask = if(_map["notification_date"] != null) _map["notification_date"] as Date else null
-        //map = _map
     }
 
     constructor(completedTask: CompletedTask) : this() {

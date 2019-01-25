@@ -14,14 +14,39 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-        <ImageView
-                android:contentDescription="Circle"
-                android:id="@+id/taskNotCompleteImage"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:srcCompat="@drawable/ic_not_done_white_20dp"
+        <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_gravity="center"
-                android:layout_marginStart="20dp"/>
+                android:layout_marginStart="10dp"
+        >
+            <ImageView
+                    android:contentDescription="Circle"
+                    android:id="@+id/taskNotCompleteImage"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    app:srcCompat="@drawable/ic_not_done_white_20dp"
+                    android:visibility="visible"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+            />
+            <com.airbnb.lottie.LottieAnimationView
+                    android:contentDescription="Circle"
+                    android:id="@+id/taskNotCompleteImageAnim"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    app:lottie_loop="false"
+                    app:lottie_fileName="done.json"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+            />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
 
         <LinearLayout
@@ -32,6 +57,7 @@
                 android:background="@android:color/transparent"
                 android:layout_marginStart="30dp"
                 android:layout_marginEnd="20dp"
+                android:layout_gravity="center"
         >
             <TextView
                     android:id="@+id/taskText"
@@ -44,7 +70,7 @@
                     android:text="asasasasas"
                     android:textColor="@color/colorItemText"
                     android:textSize="18sp"
-                    android:gravity="start"
+                    android:gravity="start|center"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintHorizontal_bias="0.0"/>
 
@@ -59,7 +85,7 @@
                     android:fontFamily="@font/google_sans_regular"
                     android:textColor="@color/colorEmailText"
                     android:textSize="14sp"
-                    android:gravity="start"
+                    android:gravity="start|center"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintHorizontal_bias="0.0"
                     android:visibility="visible"
@@ -78,6 +104,7 @@
                     app:layout_constraintHorizontal_bias="0.0"
                     android:text="2018 December 12, 1:00 PM"
                     android:fontFamily="@font/google_sans_regular"
+                    android:gravity="start|center"
                     android:textColor="@color/colorAccent"
                     android:visibility="visible"
             />

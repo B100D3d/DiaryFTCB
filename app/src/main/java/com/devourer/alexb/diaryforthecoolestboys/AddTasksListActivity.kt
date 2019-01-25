@@ -12,15 +12,11 @@ import android.view.inputmethod.InputMethodManager
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.snackbar.Snackbar
-import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import io.realm.Realm
 import io.realm.kotlin.where
 import kotlinx.android.synthetic.main.activity_add_tasks_list.*
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.collections.RandomAccess
 
 class AddTasksListActivity : AppCompatActivity() {
 
@@ -28,18 +24,21 @@ class AddTasksListActivity : AppCompatActivity() {
     private val handler = Handler()
     private val listsId = ArrayList<Long>()
     lateinit var realm: Realm
+    lateinit var data: MyData
     lateinit var snackbar: Snackbar
     private var rand: Long = 0
 
     companion object {
         private const val TAG = "Main"
+        const val INTENT_ADD_LIST_ID = "add_list"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.w(TAG, "AddTasksListActivity onCreate")
         setContentView(R.layout.activity_add_tasks_list)
-        fire = MyFirebase(this)
+        data = intent.getParcelableExtra(INTENT_ADD_LIST_ID)
+        fire = MyFirebase(this,data)
         realm = Realm.getDefaultInstance()
         Log.w(TAG, "AddTasksListActivity Realm.getDefaultInstance()")
 
@@ -77,14 +76,14 @@ class AddTasksListActivity : AppCompatActivity() {
                     handler.post {snack("Too many characters in the title!", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)}
                 }).start()
                 (addTaskListEditText.text.isNullOrEmpty()) -> hideKeyboard()
-                (addTaskListEditText.text!![0] == '.' && addTaskListEditText.text!!.length == 1) -> {
+                (addTaskListEditText.text!!.contains(".")) -> {
                     val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                     var view = currentFocus
                     if (view == null)
                         view = View(this)
                     handler.post {imm.hideSoftInputFromWindow(view!!.windowToken, 0)}
                     TimeUnit.MILLISECONDS.sleep(300)
-                    snack("Title name can't be a \".\"", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)
+                    snack("Title name cannot consist dots", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)
                 }
                 else -> updateUi()
             }
@@ -152,13 +151,14 @@ class AddTasksListActivity : AppCompatActivity() {
         realm.executeTransaction {
             it.insert(taskList)
         }
-        NavMenuCheckedItem.id = rand
-        NavMenuCheckedItem.title = taskListName
+        data.id = rand
+        data.title = taskListName
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         var view = currentFocus
         if (view == null)
             view = View(this)
         imm.hideSoftInputFromWindow(view.windowToken, 0)
+        intent.putExtra(INTENT_ADD_LIST_ID,data)
         startActivity(intent)
         finish()
 

@@ -49,7 +49,6 @@ import com.google.android.material.animation.AnimationUtils.*
 import io.realm.Realm
 import io.realm.RealmConfiguration
 import io.realm.Sort
-import io.realm.kotlin.delete
 import io.realm.kotlin.where
 import jp.wasabeef.recyclerview.adapters.AlphaInAnimationAdapter
 import jp.wasabeef.recyclerview.animators.*
@@ -61,6 +60,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var realm: Realm
     lateinit var mRealmConfiguration: RealmConfiguration
     lateinit var fire: MyFirebase
+    lateinit var data: MyData
     var dateAndTime = Calendar.getInstance()!!
     lateinit var snackbar: Snackbar
     private var isAdd: Boolean = true
@@ -78,6 +78,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG: String = "Main"
         const val INTENT_ID = "auth"
+        const val INTENT_ADD_LIST_ID = "add_list"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,9 +86,10 @@ class MainActivity : AppCompatActivity() {
         Log.w(TAG,"onCreate")
         setContentView(R.layout.activity_main)
         setSupportActionBar(bar)
-        refreshLayout.setColorSchemeResources(R.color.colorAccent)
-        refreshLayout.setProgressBackgroundColorSchemeResource(R.color.colorBottomAppBar)
-        fire = MyFirebase(this@MainActivity)
+        ///////////////////
+        setRefreshLayoutColor()
+        data = MyData()
+        fire = MyFirebase(this@MainActivity, data)
         mRealmConfiguration = RealmConfiguration.Builder()
             .name("DiaryFTCB.realm")
             .schemaVersion(3)
@@ -95,134 +97,55 @@ class MainActivity : AppCompatActivity() {
             .build()
         Realm.setDefaultConfiguration(mRealmConfiguration)
         realm = Realm.getDefaultInstance()
+        getIntentsExtras()
         initRecyclerView()
         initTasksList()
         onNavItemSelected(false)
-
-        if (intent.getBooleanExtra(INTENT_ID,false))
-            snacks.snack("Authentication access!",Snackbar.LENGTH_LONG,R.color.colorBackSnackbar,"OK",R.color.colorOkActionSnackbar)
+        ///////////////////////
 
         fab.setOnClickListener {
-            slideBarUp()
-            when {
-                !isChange -> {
-                    Log.w(TAG,"Вутри условия !isChange слушателя ФАБа")
-                    taskListGroupAdapter.addTask(
-                        isAdd,
-                        taskEditText.text.toString(),
-                        taskDetailsEditText.text.toString(),
-                        dateAndTime,
-                        chipAddDate.isChecked,
-                        snacks
-                    )
-                    updateBarUI(isAdd)
-                }
-                isChange -> {
-                    Log.w(TAG,"Вутри условия isChange слушателя ФАБа")
-                    if (!isCompleted) {
-                        taskListGroupAdapter.changeTask(
-                            taskEditText.text.toString(),
-                            taskDetailsEditText.text.toString(),
-                            chipAddDate.text.toString(),
-                            NavMenuCheckedItem.notificationDate,
-                            dateAndTime,
-                            NavMenuCheckedItem.position,
-                            snacks
-                        )
-                    }
-                    isChange = false
-                    updateBarUI(false)
-                }
-            }
+            fabOnClick()
         }
 
         chipAddDate.onCheckedChangeListener = { view: CheckableChipView, isChecked: Boolean ->
-            when {
-                (isChecked && !isAdd) -> {
-                    taskEditText.requestFocus()
-                    Thread(Runnable {
-                        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                        var view = currentFocus
-                        if (view == null)
-                            view = View(this)
-                        handler.post { imm.hideSoftInputFromWindow(view.windowToken, 0) }
-                        TimeUnit.MILLISECONDS.sleep(200)
-                        handler.post {
-                            val datePickerBottomNavigationDrawerFragment = DatePickerBottomNavigationDrawerFragment()
-                            datePickerBottomNavigationDrawerFragment.show(supportFragmentManager,DatePickerBottomNavigationDrawerFragment().tag)
-                        }
-                    }).start()
-
-                }
-                (!isChecked && !isAdd) -> chipAddDate.text = resources.getText(R.string.add_date)
-            }
-
+            chipDateOnChecked(isChecked)
         }
 
         taskDetailsEditText.addTextChangedListener(object : TextWatcher{
-            override fun afterTextChanged(s: Editable?) {
-
-            }
-
+            override fun afterTextChanged(s: Editable?) {}
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                editScrollView.fullScroll(View.FOCUS_DOWN)
-                taskDetailsEditText.requestFocus()
+                editScrollView.scrollBy(0,100)
             }
-
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                editScrollView.fullScroll(View.FOCUS_DOWN)
-                taskDetailsEditText.requestFocus()
+                editScrollView.scrollBy(0,100)
             }
-
         })
 
-
         chipAddDetails.onCheckedChangeListener = { view: CheckableChipView, isChecked: Boolean ->
-            when {
-                (isChecked && !isAdd) -> {
-                    taskDetailsEditTextInputLayout.visibility = View.VISIBLE
-                    taskDetailsEditText.requestFocus()
-                    Thread(Runnable {
-                        TimeUnit.MILLISECONDS.sleep(300)
-                        handler.post {  val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                            imm.showSoftInput(taskDetailsEditText, InputMethodManager.SHOW_IMPLICIT)
-                        }
-                    }).start()
-                }
-                (!isChecked && !isAdd) -> {
-                    taskDetailsEditText.setText("")
-                    taskDetailsEditTextInputLayout.visibility = View.INVISIBLE
-                    taskEditText.requestFocus()
-                }
-            }
+            chipDetailsOnChecked(isChecked)
         }
 
         refreshLayout.setOnRefreshListener {
-            onNavItemSelected(true)
-            refreshLayout.isRefreshing = false
+            onRefresh()
         }
 
-        completedBtn.setOnClickListener { onCompletedBtn() }
+        completedBtn.setOnClickListener { completedBtnOnClick() }
 
         contentScrollView.setOnScrollChangeListener { _: NestedScrollView?, _: Int, scrollY: Int, _: Int, oldScrollY: Int ->
-            //Log.w(TAG, "ScrollY -> $scrollY")
-            if (isBarAnimateEnd){
-                when{
-                    scrollY > oldScrollY -> slideBarDown()
-                    scrollY < oldScrollY -> slideBarUp()
-                }
-            }
+            contentOnScroll(scrollY, oldScrollY)
         }
 
         editScrollView.setOnScrollChangeListener { _: NestedScrollView?, _: Int, scrollY: Int, _: Int, oldScrollY: Int ->
-            if (isBarAnimateEnd){
-                when{
-                    scrollY > oldScrollY -> slideBarDown()
-                    scrollY < oldScrollY -> slideBarUp()
-                }
-            }
+            editOnScroll(scrollY, oldScrollY)
         }
 
+    }
+
+    private fun getIntentsExtras(){
+        if (intent.getBooleanExtra(INTENT_ID,false))
+            snacks.snack("Authentication access!",Snackbar.LENGTH_LONG,R.color.colorBackSnackbar,"OK",R.color.colorOkActionSnackbar)
+        if (intent.hasExtra(INTENT_ADD_LIST_ID))
+            data = intent.getParcelableExtra(INTENT_ADD_LIST_ID)
     }
 
     override fun onStart() {
@@ -250,6 +173,104 @@ class MainActivity : AppCompatActivity() {
                 val intent = Intent(this,LoginActivity::class.java)
                 startActivity(intent)
                 finish()
+            }
+        }
+    }
+
+    private fun fabOnClick(){
+        slideBarUp()
+        when {
+            !isChange -> {
+                Log.w(TAG,"Вутри условия !isChange слушателя ФАБа")
+                taskListGroupAdapter.addTask(
+                    isAdd,
+                    taskEditText.text.toString(),
+                    taskDetailsEditText.text.toString(),
+                    dateAndTime,
+                    chipAddDate.isChecked,
+                    snacks
+                )
+                updateBarUI(isAdd)
+            }
+            isChange -> {
+                Log.w(TAG,"Вутри условия isChange слушателя ФАБа")
+                if (!isCompleted) {
+                    taskListGroupAdapter.changeTask(
+                        taskEditText.text.toString(),
+                        taskDetailsEditText.text.toString(),
+                        chipAddDate.text.toString(),
+                        data.notificationDate,
+                        dateAndTime,
+                        data.position,
+                        snacks
+                    )
+                }
+                isChange = false
+                updateBarUI(false)
+            }
+        }
+    }
+
+    private fun chipDateOnChecked(isChecked: Boolean){
+        when {
+            (isChecked && !isAdd) -> {
+                Thread(Runnable {
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    var view = currentFocus
+                    if (view == null)
+                        view = View(this)
+                    handler.post { imm.hideSoftInputFromWindow(view.windowToken, 0) }
+                    TimeUnit.MILLISECONDS.sleep(200)
+                    handler.post {
+                        val datePickerBottomNavigationDrawerFragment = DatePickerBottomNavigationDrawerFragment()
+                        datePickerBottomNavigationDrawerFragment.show(supportFragmentManager,DatePickerBottomNavigationDrawerFragment().tag)
+                    }
+                }).start()
+
+            }
+            (!isChecked && !isAdd) -> chipAddDate.text = resources.getText(R.string.add_date)
+        }
+    }
+
+    private fun chipDetailsOnChecked(isChecked: Boolean){
+        when {
+            (isChecked && !isAdd) -> {
+                taskDetailsEditTextInputLayout.visibility = View.VISIBLE
+                taskDetailsEditText.requestFocus()
+                Thread(Runnable {
+                    TimeUnit.MILLISECONDS.sleep(300)
+                    handler.post {  val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                        imm.showSoftInput(taskDetailsEditText, InputMethodManager.SHOW_IMPLICIT)
+                    }
+                }).start()
+            }
+            (!isChecked && !isAdd) -> {
+                taskDetailsEditText.setText("")
+                taskDetailsEditTextInputLayout.visibility = View.INVISIBLE
+                taskEditText.requestFocus()
+            }
+        }
+    }
+
+    private fun onRefresh(){
+        onNavItemSelected(true)
+        refreshLayout.isRefreshing = false
+    }
+
+    private fun contentOnScroll(scrollY: Int, oldScrollY: Int){
+        if (isBarAnimateEnd){
+            when{
+                scrollY > oldScrollY -> slideBarDown()
+                scrollY < oldScrollY -> slideBarUp()
+            }
+        }
+    }
+
+    private fun editOnScroll(scrollY: Int, oldScrollY: Int){
+        if (isBarAnimateEnd){
+            when{
+                scrollY > oldScrollY -> slideBarDown()
+                scrollY < oldScrollY -> slideBarUp()
             }
         }
     }
@@ -286,8 +307,8 @@ class MainActivity : AppCompatActivity() {
                     else -> {
                         isChange = false
                         when{
-                            !isCompleted -> { taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks) }
-                            isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(NavMenuCheckedItem.position) }
+                            !isCompleted -> { taskListGroupAdapter.deleteTask(data.position,snacks) }
+                            isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position) }
                         }
                         updateBarUI(false)
                     }
@@ -301,30 +322,102 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
+    private fun setUiAlpha(b: Boolean){
+        when (b){
+            true -> {
+                headerView.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                    override fun onAnimationEnd(animation: Animator?) {
+                        super.onAnimationEnd(animation)
+                        headerView.alpha = 0f
+                        headerView.visibility = View.GONE
+                    }
+                })
+                headerLineView.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                    override fun onAnimationEnd(animation: Animator?) {
+                        super.onAnimationEnd(animation)
+                        headerLineView.alpha = 0f
+                        headerLineView.visibility = View.GONE
+                    }
+                })
+                refreshLayout.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                    override fun onAnimationEnd(animation: Animator?) {
+                        super.onAnimationEnd(animation)
+                        refreshLayout.alpha = 0f
+                        refreshLayout.visibility = View.GONE
+                    }
+                })
+                Thread(Runnable {
+                    TimeUnit.MILLISECONDS.sleep(150)
+                    handler.post {
+                        editScrollView.visibility = View.VISIBLE
+                        editScrollView.animate().alpha(1f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                            override fun onAnimationEnd(animation: Animator?) {
+                                super.onAnimationEnd(animation)
+                                editScrollView.alpha = 1f
+                            }
+                        })
+                    }
+                }).start()
+            }
+            false -> {
+                editScrollView.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                    override fun onAnimationEnd(animation: Animator?) {
+                        super.onAnimationEnd(animation)
+                        editScrollView.alpha = 0f
+                        editScrollView.visibility = View.GONE
+                    }
+                })
+                Thread(Runnable {
+                    TimeUnit.MILLISECONDS.sleep(150)
+                    handler.post {
+                        headerView.visibility = View.VISIBLE
+                        headerView.animate().alpha(1f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                            override fun onAnimationEnd(animation: Animator?) {
+                                super.onAnimationEnd(animation)
+                                headerView.alpha = 1f
+                            }
+                        })
+                        headerLineView.visibility = View.VISIBLE
+                        headerLineView.animate().alpha(1f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                            override fun onAnimationEnd(animation: Animator?) {
+                                super.onAnimationEnd(animation)
+                                headerLineView.alpha = 1f
+                            }
+                        })
+                        refreshLayout.visibility = View.VISIBLE
+                        refreshLayout.animate().alpha(1f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                            override fun onAnimationEnd(animation: Animator?) {
+                                super.onAnimationEnd(animation)
+                                refreshLayout.alpha = 1f
+                            }
+                        })
+                    }
+                }).start()
+            }
+        }
+    }
+
 
     private fun updateBarUI(b:Boolean){
         when (b) {
             true -> {
+                progressBarMain.cancelAnimation()
                 progressBarMain.visibility = View.GONE
-                headerView.visibility = View.INVISIBLE
-                headerLineView.visibility = View.INVISIBLE
-                contentScrollView.visibility = View.INVISIBLE
-                refreshLayout.visibility = View.INVISIBLE
+                setUiAlpha(b)
                 fab.setImageDrawable(getDrawable(R.drawable.avd_add_to_done))
-                val icon = fab.drawable
-                if(icon is AnimatedVectorDrawable)
-                    icon.start()
-                taskEditTextLayout.visibility = View.VISIBLE
+                val icon = fab.drawable as AnimatedVectorDrawable
+                icon.start()
                 bar.navigationIcon = null
                 bar.replaceMenu(R.menu.empty_menu)
                 Thread(Runnable {
                     handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END}
-                    //handler.post { fab.setImageDrawable(getDrawable(R.drawable.ic_done_white_24dp)) }
                     TimeUnit.MILLISECONDS.sleep(300)
-                    handler.post {taskEditText.requestFocus()}
-                    handler.post { bar.replaceMenu(R.menu.add_task_menu) }
-                    handler.post {  val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                        imm.showSoftInput(taskEditText, InputMethodManager.SHOW_IMPLICIT) }
+                    handler.post {
+                        taskEditText.requestFocus()
+                        bar.replaceMenu(R.menu.add_task_menu)
+                        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                        imm.showSoftInput(taskEditText, InputMethodManager.SHOW_IMPLICIT)
+                    }
                 }).start()
                 isAdd = false
             }
@@ -338,28 +431,24 @@ class MainActivity : AppCompatActivity() {
                     chipAddDetails.isClickable = true
 
                 }
-                taskEditText.setText("")
-                taskDetailsEditText.setText("")
-                chipAddDate.isChecked = false
-                chipAddDetails.isChecked = false
-                chipAddDate.text = resources.getText(R.string.add_date)
-                headerView.visibility = View.VISIBLE
-                headerLineView.visibility = View.VISIBLE
-                contentScrollView.visibility = View.VISIBLE
-                refreshLayout.visibility = View.VISIBLE
-                taskDetailsEditTextInputLayout.visibility = View.INVISIBLE
-                taskEditTextLayout.visibility = View.INVISIBLE
+                setUiAlpha(b)
                 fab.setImageDrawable(getDrawable(R.drawable.avd_done_to_add))
-                val icon = fab.drawable
-                if(icon is AnimatedVectorDrawable)
-                    icon.start()
+                val icon = fab.drawable as AnimatedVectorDrawable
+                icon.start()
                 bar.replaceMenu(R.menu.empty_menu)
                 Thread(Runnable {
                     handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_CENTER}
-                    //handler.post { fab.setImageDrawable(getDrawable(R.drawable.ic_add_white_24dp)) }
                     TimeUnit.MILLISECONDS.sleep(300)
-                    handler.post { bar.replaceMenu(R.menu.main_menu) }
-                    handler.post { bar.setNavigationIcon(R.drawable.ic_menu_white_24dp) }
+                    handler.post {
+                        bar.replaceMenu(R.menu.main_menu)
+                        bar.setNavigationIcon(R.drawable.ic_menu_white_24dp)
+                        taskEditText.setText("")
+                        taskDetailsEditText.setText("")
+                        taskDetailsEditTextInputLayout.visibility = View.INVISIBLE
+                        chipAddDate.isChecked = false
+                        chipAddDetails.isChecked = false
+                        chipAddDate.text = resources.getText(R.string.add_date)
+                    }
                 }).start()
                 isAdd = true
                 isCompleted = false
@@ -375,24 +464,19 @@ class MainActivity : AppCompatActivity() {
         val notificationDate = if (_notificationDate != null) dateFormat.format((_notificationDate as Date).time) else ""
         if (!taskDetailsText.isNullOrBlank()){
             chipAddDetails.isChecked = true
-            taskEditText.requestFocus()
             taskDetailsEditTextInputLayout.visibility = View.VISIBLE
             taskDetailsEditText.setText(taskDetailsText)
+            taskEditText.requestFocus()
         }
         if (!notificationDate.isNullOrBlank()){
             chipAddDate.isChecked = true
             chipAddDate.text = notificationDate
         }
-        headerView.visibility = View.INVISIBLE
-        headerLineView.visibility = View.INVISIBLE
-        contentScrollView.visibility = View.INVISIBLE
-        refreshLayout.visibility = View.INVISIBLE
-        taskEditTextLayout.visibility = View.VISIBLE
+        setUiAlpha(true)
         bar.navigationIcon = null
         fab.setImageDrawable(getDrawable(R.drawable.avd_add_to_done))
-        val icon = fab.drawable
-        if(icon is AnimatedVectorDrawable)
-            icon.start()
+        val icon = fab.drawable as AnimatedVectorDrawable
+        icon.start()
         bar.replaceMenu(R.menu.empty_menu)
         Thread(Runnable {
             handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END}
@@ -427,16 +511,11 @@ class MainActivity : AppCompatActivity() {
             chipAddDate.isChecked = true
             chipAddDate.text = notificationDate
         }
-        headerView.visibility = View.INVISIBLE
-        headerLineView.visibility = View.INVISIBLE
-        contentScrollView.visibility = View.INVISIBLE
-        refreshLayout.visibility = View.INVISIBLE
-        taskEditTextLayout.visibility = View.VISIBLE
+        setUiAlpha(true)
         bar.navigationIcon = null
         fab.setImageDrawable(getDrawable(R.drawable.avd_add_to_done))
-        val icon = fab.drawable
-        if(icon is AnimatedVectorDrawable)
-            icon.start()
+        val icon = fab.drawable as AnimatedVectorDrawable
+        icon.start()
         bar.replaceMenu(R.menu.empty_menu)
         Thread(Runnable {
             handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END}
@@ -449,11 +528,12 @@ class MainActivity : AppCompatActivity() {
 
     fun onNavItemSelected(isSync: Boolean){
         progressBarMain.visibility = View.VISIBLE
+        progressBarMain.playAnimation()
         completedBtnLayout.visibility = View.GONE
         tasksListGroup.visibility = View.GONE
         completedTasksListGroup.visibility = View.GONE
         isCompletedListGroupExpanded = false
-        list_name_text.text = NavMenuCheckedItem.title
+        list_name_text.text = data.title
         when (isSync){
             false -> initTasks()
             true -> initAllFirebaseTasks()
@@ -473,12 +553,13 @@ class MainActivity : AppCompatActivity() {
 
     fun createNewTasksList(){
         val intent = Intent(this,AddTasksListActivity::class.java)
+        intent.putExtra(INTENT_ADD_LIST_ID,data)
         startActivity(intent)
     }
 
     fun deleteTaskList(){
-        if (NavMenuCheckedItem.title != "My Tasks") {
-            val title = NavMenuCheckedItem.title
+        if (data.title != "My Tasks") {
+            val title = data.title
             val taskList = realm
                 .where<TaskList>()
                 .`in`("nameOfTaskList", arrayOf(title))
@@ -500,8 +581,8 @@ class MainActivity : AppCompatActivity() {
 
             fire.deleteTaskList(title)
 
-            NavMenuCheckedItem.title = "My Tasks"
-            NavMenuCheckedItem.id = R.id.my_tasks_list.toLong()
+            data.title = "My Tasks"
+            data.id = R.id.my_tasks_list.toLong()
             snacks.snack("List removed", Snackbar.LENGTH_LONG, R.color.colorBackSnackbar)
             initTasksList()
             onNavItemSelected(false)
@@ -512,7 +593,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun initTasks(){
         Log.w(TAG, "initTasks")
-        val title = NavMenuCheckedItem.title
+        val title = data.title
         list_name_text.text = title
         ///////////
         mTasks.clear()
@@ -545,6 +626,7 @@ class MainActivity : AppCompatActivity() {
                 mCompletedTasks.add(it)
             }
             Log.w(TAG, "mTasks.size -> ${mTasks.size} | mCompletedTasks.size -> ${mCompletedTasks.size}")
+            progressBarMain.cancelAnimation()
             progressBarMain.visibility = View.GONE
             completedTasksListGroupAdapter.notifyDataSetChanged()
             Log.w(TAG, "Обновление адаптера completedTaskList при инициализации таскс")
@@ -556,7 +638,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun initAllFirebaseTasks() {
         Log.w(TAG, "initAllFirebaseTasks")
-        val title = NavMenuCheckedItem.title
+        val title = data.title
         list_name_text.text = title
         ///////////
         mTasks.clear()
@@ -576,15 +658,15 @@ class MainActivity : AppCompatActivity() {
                         val doc = it.result!!.documents[i]
                         val taskList = TaskList(doc["name"] as String, doc["id"] as Long)
                         mTaskLists.add(taskList)
-                        realm.executeTransaction {
-                            it.insert(taskList)
+                        realm.executeTransaction { r ->
+                            r.insert(taskList)
                         }
                     }
                 }
             }
             val tasksList = ArrayList<String>()
-            mTaskLists.forEach {
-                tasksList.add(it.nameOfTaskList)
+            mTaskLists.forEach { list ->
+                tasksList.add(list.nameOfTaskList)
             }
             tasksList.add("My Tasks")
 
@@ -609,8 +691,8 @@ class MainActivity : AppCompatActivity() {
                                     )
                                     if (tasksList[list] == title)
                                         mTasks.add(task)
-                                    realm.executeTransaction {
-                                        it.insert(task)
+                                    realm.executeTransaction { r ->
+                                        r.insert(task)
                                     }
                                     //Log.w(TAG,"mTasks[i] -> ${mTasks[i]}")
                                 }
@@ -636,8 +718,8 @@ class MainActivity : AppCompatActivity() {
                                             )
                                             if (tasksList[list] == title)
                                                 mCompletedTasks.add(completedTask)
-                                            realm.executeTransaction {
-                                                it.insert(completedTask)
+                                            realm.executeTransaction { r ->
+                                                r.insert(completedTask)
                                             }
                                             //Log.w(TAG,"mCompletedTasks[i] -> ${mCompletedTasks[i]}")
                                         }
@@ -648,6 +730,7 @@ class MainActivity : AppCompatActivity() {
                                                 TAG, "realm task -> ${realm.where<Task>().findAll().size} " +
                                                         "| realm completed -> ${realm.where<CompletedTask>().findAll().size}"
                                             )
+                                            progressBarMain.cancelAnimation()
                                             progressBarMain.visibility = View.GONE
                                             completedTasksListGroupAdapter.notifyDataSetChanged()
                                             Log.w(TAG, "Обновление адаптера completedTaskList при инициализации таскс")
@@ -665,6 +748,7 @@ class MainActivity : AppCompatActivity() {
                             }
                         } else {
                             Log.w(TAG, "ERROR initAllFirebaseTasks (by date) -> ${it.exception}")
+                            progressBarMain.cancelAnimation()
                             progressBarMain.visibility = View.GONE
                             snacks.snack(
                                 "Something went wrong!",
@@ -686,6 +770,7 @@ class MainActivity : AppCompatActivity() {
             this,
             mTasks,
             realm,
+            data,
             snacks,
             object : AdapterInterface {
                 override fun taskNotCompleteImageViewOnClick(
@@ -717,10 +802,10 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     slideBarUp()
                     updateUIWhenTaskTextIsClicked(taskText, taskDetailsText, notificationDate)
-                    NavMenuCheckedItem.position = position
-                    NavMenuCheckedItem.taskText = taskText
-                    NavMenuCheckedItem.taskDetailsText = taskDetailsText
-                    NavMenuCheckedItem.notificationDate = notificationDate
+                    data.position = position
+                    data.taskText = taskText
+                    data.taskDetailsText = taskDetailsText
+                    data.notificationDate = notificationDate
                     isChange = true
                 }
             }
@@ -744,6 +829,7 @@ class MainActivity : AppCompatActivity() {
                     this,
                     mCompletedTasks,
                     realm,
+                    data,
                     snacks,
                     object : CompletedAdapterInterface {
                         override fun taskCompletedImageViewOnClick(
@@ -776,7 +862,7 @@ class MainActivity : AppCompatActivity() {
                             updateUIWhenCompletedTaskTextIsClicked(taskText,taskDetailsText,notificationDate)
                             isChange = true
                             isCompleted = true
-                            NavMenuCheckedItem.position = position
+                            data.position = position
                         }
 
                     }
@@ -865,7 +951,7 @@ class MainActivity : AppCompatActivity() {
         chipAddDate.text = dateFormat.format(dateAndTime.time)
     }
 
-    private fun onCompletedBtn(){
+    private fun completedBtnOnClick(){
         when (isCompletedListGroupExpanded) {
             false -> {
                 Log.w(TAG, "false")
@@ -1003,6 +1089,10 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    private fun setRefreshLayoutColor(){
+        refreshLayout.setColorSchemeResources(R.color.colorAccent)
+        refreshLayout.setProgressBackgroundColorSchemeResource(R.color.colorBottomAppBar)
+    }
 
     val snacks = object : Snacks{
         override fun snack(text: String, duration: Int, backColor: Int) {
@@ -1066,7 +1156,11 @@ class MainActivity : AppCompatActivity() {
             key: Boolean,
             position: Int
         ) {
-            val task: Any = if(!key) Task(taskText,taskDetailsText,taskDate,notificationDate,taskId,NavMenuCheckedItem.title) else CompletedTask(taskText,taskDetailsText,taskDate,completionDate,notificationDate,taskId, NavMenuCheckedItem.title)
+            val task: Any =
+                if(!key)
+                    Task(taskText,taskDetailsText,taskDate,notificationDate,taskId,data.title)
+                else
+                    CompletedTask(taskText,taskDetailsText,taskDate,completionDate,notificationDate,taskId, data.title)
             val screenSize = Point()
             windowManager.defaultDisplay.getSize(screenSize)
             val marginSide = 0
@@ -1130,14 +1224,14 @@ class MainActivity : AppCompatActivity() {
                         completedTasksListGroupAdapter.moveTaskToNotCompleted(0) // delete task from completedTasksListGroup
                         val task = Task(map)
                         task.id = id
-                        task.listTitle = NavMenuCheckedItem.title
+                        task.listTitle = data.title
                         val movedTask = realm
                             .where<CompletedTask>()
                             .`in`("id", arrayOf(id))
                             .findFirst()
-                        realm.executeTransaction {
+                        realm.executeTransaction { r ->
                             movedTask!!.deleteFromRealm()
-                            it.insert(task)
+                            r.insert(task)
                         }
                         taskListGroupAdapter.moveTaskFromCompleted(task, position) // add task to TasksListGroup
                         showCompletedBtnWhenTaskMoved()
@@ -1148,7 +1242,7 @@ class MainActivity : AppCompatActivity() {
                         taskListGroupAdapter.moveTaskToCompleted(0) // delete task from TasksListGroup
                         val completedTask = CompletedTask(map)
                         completedTask.id = id
-                        completedTask.listTitle = NavMenuCheckedItem.title
+                        completedTask.listTitle = data.title
                         val movedTask = realm
                             .where<Task>()
                             .`in`("id", arrayOf(id))
@@ -1190,8 +1284,8 @@ class MainActivity : AppCompatActivity() {
                 true -> deleteTaskList()
                 false -> {
                     when{
-                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(NavMenuCheckedItem.position) }
-                        !isCompleted -> { taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks) }
+                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position) }
+                        !isCompleted -> { taskListGroupAdapter.deleteTask(data.position,snacks) }
                     }
                     updateBarUI(false)
                 }
@@ -1211,8 +1305,8 @@ class MainActivity : AppCompatActivity() {
                 true -> deleteTaskList()
                 false -> {
                     when{
-                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(NavMenuCheckedItem.position) }
-                        !isCompleted -> { taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks) }
+                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position) }
+                        !isCompleted -> { taskListGroupAdapter.deleteTask(data.position,snacks) }
                     }
                     updateBarUI(false)
                 }
@@ -1225,8 +1319,8 @@ class MainActivity : AppCompatActivity() {
                 true -> deleteTaskList()
                 false -> {
                     when{
-                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(NavMenuCheckedItem.position) }
-                        !isCompleted -> { taskListGroupAdapter.deleteTask(NavMenuCheckedItem.position,snacks) }
+                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position) }
+                        !isCompleted -> { taskListGroupAdapter.deleteTask(data.position,snacks) }
                     }
                     updateBarUI(false)
                 }

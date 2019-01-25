@@ -1,5 +1,6 @@
 package com.devourer.alexb.diaryforthecoolestboys.Adapters
 
+import android.animation.Animator
 import android.content.Context
 import android.util.Log
 import android.view.LayoutInflater
@@ -9,6 +10,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.airbnb.lottie.LottieAnimationView
 import com.devourer.alexb.diaryforthecoolestboys.*
 import com.google.android.material.snackbar.Snackbar
 import io.realm.Realm
@@ -19,9 +21,10 @@ import kotlin.collections.ArrayList
 
 
 class TasksRecyclerViewAdapter(
-    private val mContext: Context,
+    mContext: Context,
     _tasks: ArrayList<Task>,
     _realm: Realm,
+    _data: MyData,
     _snackInterface: Snacks,
     _adapterInterface: AdapterInterface
 ) : RecyclerView.Adapter<TasksRecyclerViewAdapter.ViewHolder>() {
@@ -30,15 +33,19 @@ class TasksRecyclerViewAdapter(
     companion object {
         private const val TAG: String = "Main"
     }
-    private var fire: MyFirebase = MyFirebase(mContext)
+    private var fire: MyFirebase = MyFirebase(mContext,_data)
+    private var data: MyData
     var realm: Realm
     private var mTasks = ArrayList<Task>()
-    private var mAdapterInterface: AdapterInterface = _adapterInterface
-    private var mSnackInterface: Snacks = _snackInterface
+    private var mAdapterInterface: AdapterInterface
+    private var mSnackInterface: Snacks
 
     init {
         mTasks = _tasks
         realm = _realm
+        data = _data
+        mAdapterInterface = _adapterInterface
+        mSnackInterface = _snackInterface
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -47,22 +54,10 @@ class TasksRecyclerViewAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        Log.w(TAG, "Tasks onBindViewHolder $position")
-        /*val date: Date = mTaskDate[position] as Date
-        val sdf = java.text.SimpleDateFormat("dd/M/yyyy hh:mm:ss")
-        val sDate = sdf.format(date)*/
-        //holder.taskText.paintFlags = Paint.STRIKE_THRU_TEXT_FLAG
+        //Log.w(TAG, "Tasks onBindViewHolder $position")
         setTaskText(holder,position)
         setTasksDetailsText(holder,position)
         setNotificationDateChip(holder,position)
-
-
-
-        //Log.w(TAG,"Date -> ${date} ")
-        //Log.w(TAG,"sDate -> ${sDate} ")
-        //"${Calendar.getInstance().get(Calendar.YEAR)} ${mTaskDate[position].toString().substring(4..19)}"
-        //holder.taskDate.text = sDate.toString()
-
     }
 
     override fun onViewAttachedToWindow(holder: ViewHolder) {
@@ -71,13 +66,25 @@ class TasksRecyclerViewAdapter(
 
         holder.taskNotCompleteImageView.setOnClickListener {
 
-            val position = holder.adapterPosition
-            val task = Task(mTasks[position])
-            val completionDate = Date()
-            addTaskToCompleted(position, completionDate, mSnackInterface) // remove task from this list and add to firestore
-            mAdapterInterface.taskNotCompleteImageViewOnClick(task, completionDate, position)
-
-
+            holder.taskNotCompleteImageView.visibility = View.GONE
+            holder.taskNotCompleteImageAnim.visibility = View.VISIBLE
+            holder.taskNotCompleteImageAnim.playAnimation()
+            holder.taskNotCompleteImageAnim.addAnimatorListener(object : Animator.AnimatorListener{
+                override fun onAnimationRepeat(animation: Animator?) {}
+                override fun onAnimationEnd(animation: Animator?) {
+                    holder.taskNotCompleteImageAnim.removeAllAnimatorListeners()
+                    holder.taskNotCompleteImageAnim.clearAnimation()
+                    val position = holder.adapterPosition
+                    val task = Task(mTasks[position])
+                    val completionDate = Date()
+                    addTaskToCompleted(position, completionDate, mSnackInterface) // remove task from this list and add to firestore
+                    mAdapterInterface.taskNotCompleteImageViewOnClick(task, completionDate, position)
+                    holder.taskNotCompleteImageView.visibility = View.VISIBLE
+                    holder.taskNotCompleteImageAnim.visibility = View.GONE
+                }
+                override fun onAnimationCancel(animation: Animator?) {}
+                override fun onAnimationStart(animation: Animator?) {}
+            })
         }
 
         holder.taskTextLayout.setOnClickListener {
@@ -102,8 +109,8 @@ class TasksRecyclerViewAdapter(
         var taskDetailsText: TextView = itemView.findViewById(R.id.detailsTaskText)
         var taskNotificationDateText: TextView = itemView.findViewById(R.id.taskNotificationDateText)
         var parentLayout: LinearLayout = itemView.findViewById(R.id.parent_layout)
-        //var taskNotCompleteImageLayout: LinearLayout = itemView.findViewById(R.id.taskNotCompleteImageLayout)
         var taskNotCompleteImageView: ImageView = itemView.findViewById(R.id.taskNotCompleteImage)
+        var taskNotCompleteImageAnim: LottieAnimationView = itemView.findViewById(R.id.taskNotCompleteImageAnim)
         var taskTextLayout: LinearLayout = itemView.findViewById(R.id.taskTextLayout)
 
     }
@@ -111,12 +118,12 @@ class TasksRecyclerViewAdapter(
     fun addTask(isAdd: Boolean, _taskText: String?, _taskDetailsText: String?, _dateAndTime: Calendar, isChipChecked: Boolean, snackInterface: Snacks){
         if (!isAdd){
             if (!_taskText.isNullOrEmpty()) {
-                val id = fire.uIdDoc.collection(NavMenuCheckedItem.title).document().id
+                val id = fire.uIdDoc.collection(data.title).document().id
                 Log.w(TAG, "id -> $id")
                 val taskDetailsText = if (_taskDetailsText.isNullOrBlank()) "" else _taskDetailsText
                 val date = Date()
                 val notificationDate = if (isChipChecked) _dateAndTime.time else null
-                val newTask = Task(_taskText, taskDetailsText, date, notificationDate,id,NavMenuCheckedItem.title)
+                val newTask = Task(_taskText, taskDetailsText, date, notificationDate,id,data.title)
                 mTasks.add(0, newTask)
                 notifyItemInserted(0)
                 realm.executeTransaction {
@@ -170,7 +177,7 @@ class TasksRecyclerViewAdapter(
                 _dateAndTime.time
             }
             else null
-        val changedTask = Task(taskEditText, taskDetailsEditText, date, changedNotificationDate, id, NavMenuCheckedItem.title)
+        val changedTask = Task(taskEditText, taskDetailsEditText, date, changedNotificationDate, id, data.title)
         if ((taskEditText != mTasks[position].taskText || taskDetailsEditText != mTasks[position].taskDetailsText || changedNotificationDate != _notificationDate) && !taskEditText.isNullOrEmpty()) {
             mTasks[position] = changedTask
             notifyItemChanged(position)
