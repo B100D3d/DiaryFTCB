@@ -46,7 +46,7 @@ class MyFirebase (context: Context, _data: MyData){
     }
 
     fun changeTask(map: Map<String,Any?>, id: String?){
-        Log.w(TAG,"ID (fire) -> $id")
+        //Log.w(TAG,"ID (fire) -> $id")
 
         uIdDoc.collection(data.title).document(id!!).update(map).addOnCompleteListener {
             if (it.isSuccessful){
@@ -127,6 +127,15 @@ class MyFirebase (context: Context, _data: MyData){
 
                 }
             }
+    }
+
+    fun moveTaskToAnotherList(task: Task?, currentListTitle: String, newListTitle: String){
+        uIdDoc.collection(currentListTitle).document(task?.id!!).delete()
+        uIdDoc.collection(newListTitle).document(task.id!!).set(task.map()).addOnCompleteListener {
+            if (it.isSuccessful){
+                Log.w(TAG, "moveTaskToAnotherList successful")
+            }
+        }
     }
 
 

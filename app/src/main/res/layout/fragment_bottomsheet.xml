@@ -125,8 +125,7 @@
                     app:menu="@menu/bottom_nav_drawer_menu"
                     app:itemTextColor="@color/drawer_item"
                     android:theme="@style/NavigationDrawerStyle"
-                    app:itemHorizontalPadding="40dp"
-                    app:itemIconPadding="5dp"
+                    app:itemHorizontalPadding="20dp"
                     android:background="@android:color/transparent"
                     app:itemBackground="@color/drawer_back_item"
                     app:itemIconTint="@color/colorCheckedItemText"/>

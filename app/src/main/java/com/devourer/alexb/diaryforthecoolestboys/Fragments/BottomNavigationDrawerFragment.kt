@@ -2,13 +2,16 @@ package com.devourer.alexb.diaryforthecoolestboys.Fragments
 
 
 import android.app.Dialog
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.content.res.ResourcesCompat
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
@@ -24,7 +27,7 @@ import com.google.android.material.internal.NavigationMenuView
 import com.google.android.material.navigation.NavigationView
 
 
-class BottomNavigationDrawerFragment: BottomSheetDialogFragment() {
+class BottomNavigationDrawerFragment : BottomSheetDialogFragment() {
 
     lateinit var fire: MyFirebase
     lateinit var data: MyData
@@ -40,6 +43,8 @@ class BottomNavigationDrawerFragment: BottomSheetDialogFragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
+
+
         val mainActivity = activity as MainActivity
         data = mainActivity.data
         fire = mainActivity.fire
@@ -54,10 +59,10 @@ class BottomNavigationDrawerFragment: BottomSheetDialogFragment() {
             param.height = px.toInt()
         }
         setProfileInfo(fire.name, fire.email, fire.photoUrl)
-        val id: Long = data.id
+        val id: Long = data.listId
         navigation_view.setCheckedItem(id.toInt())
         navigation_view.setNavigationItemSelectedListener { menuItem ->
-            data.id = menuItem.itemId.toLong()
+            data.listId = menuItem.itemId.toLong()
             data.title = menuItem.title as String
             mainActivity.onNavItemSelected(false)
             dismiss()

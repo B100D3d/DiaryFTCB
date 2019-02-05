@@ -12,6 +12,7 @@ open class Task() : RealmObject() {
     var dateOfTasks: Date? = null
     var notificationDateOfTask: Date? = null
     var id: String? = ""
+    var notificationId: Int? = null
 
     constructor(_taskText: String?,
                 _taskDetailsText: String?,
@@ -35,6 +36,7 @@ open class Task() : RealmObject() {
         notificationDateOfTask = task.notificationDateOfTask
         id = task.id
         listTitle = task.listTitle
+        notificationId = task.notificationId
     }
 
     constructor(completedTask: CompletedTask) : this(){

@@ -115,7 +115,7 @@ class CompletedTasksRecyclerViewAdapter(
         var completedTaskDetailsText: TextView = itemView.findViewById(R.id.completedDetailsTaskText)
         var completedTaskNotificationDateText: TextView = itemView.findViewById(R.id.completedTaskNotificationDateText)
         var parentLayout: LinearLayout = itemView.findViewById(R.id.parent_layout_)
-        //var taskCompletedImageLayout: LinearLayout = itemView.findViewById(R.id.taskCompletedImageLayout)
+        //var taskCompletedImageLayout: LinearLayout = itemView.findViewById(R.listId.taskCompletedImageLayout)
         var taskCompletedImageView: ImageView = itemView.findViewById(R.id.taskCompletedImage)
         var taskCompletedImageAnim: LottieAnimationView = itemView.findViewById(R.id.taskCompletedImageAnim)
         var completeTaskTextLayout: LinearLayout = itemView.findViewById(R.id.completeTaskTextLayout)
@@ -165,10 +165,11 @@ class CompletedTasksRecyclerViewAdapter(
 
     }
 
-    fun deleteCompletedTask(position: Int){
+    fun deleteCompletedTask(position: Int, showCompletionBtnWhenDeleted: DeleteCompletedTaskAdapterInterface){
         val completedTask = CompletedTask(mCompletedTasks[position])
         mCompletedTasks.removeAt(position)
         notifyItemRemoved(position)
+        showCompletionBtnWhenDeleted.showCompletionBtnWhenCompletedTaskDeleted()
         val deletedCompletedTask = realm
             .where<CompletedTask>()
             .`in`("id", arrayOf(completedTask.id))

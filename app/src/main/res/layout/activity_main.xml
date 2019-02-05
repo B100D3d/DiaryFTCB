@@ -32,6 +32,31 @@
                 android:layout_marginStart="20dp"
                 android:visibility="visible">
 
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/changeTaskListBtn"
+                    android:visibility="gone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toTopOf="@id/taskEditTextInputLayout"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="0"
+                    android:layout_marginTop="2dp"
+                    android:text="My Tasks"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:textSize="14sp"
+                    android:textColor="@color/colorItemText"
+                    app:rippleColor="@color/colorAccent"
+                    app:strokeColor="@android:color/transparent"
+                    app:cornerRadius="10dp"
+                    android:fontFamily="@font/google_sans_regular"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Small"
+                    android:textAlignment="viewStart"
+                    android:paddingLeft="0dp"
+                    android:layout_marginStart="5dp"
+                    app:icon="@drawable/avd_arrow_down_to_up"/>
+
 
             <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/taskEditTextInputLayout"
@@ -40,7 +65,7 @@
                     android:hint="@string/taskEditTextHint"
                     android:visibility="visible"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/changeTaskListBtn" app:layout_constraintStart_toStartOf="parent"
                     android:layout_marginStart="8dp" app:layout_constraintEnd_toEndOf="parent"
                     android:layout_marginEnd="8dp" android:focusable="auto"
 
@@ -198,6 +223,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="102dp"
+        android:visibility="visible"
 >
 
 

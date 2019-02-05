@@ -14,6 +14,10 @@ interface CompletedAdapterInterface{
     fun completedTaskTextViewOnClick(taskText: String?, taskDetailsText: String?, notificationDate: Any?, position: Int)
 }
 
+interface DeleteCompletedTaskAdapterInterface{
+    fun showCompletionBtnWhenCompletedTaskDeleted()
+}
+
 interface Snacks{
     fun snack(
     text: String,
@@ -52,6 +56,7 @@ interface Snacks{
         map: Map<String, Any?>,
         key: Boolean,
         id: String?,
+        notificationId: Int?,
         position: Int)
 
 

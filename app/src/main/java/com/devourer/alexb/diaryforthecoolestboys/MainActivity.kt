@@ -45,6 +45,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 import com.devourer.alexb.diaryforthecoolestboys.FingerprintLibrary.AuthenticationCallback
+import com.devourer.alexb.diaryforthecoolestboys.Fragments.ChangeListBottomNavigationDrawerFragment
+import com.devourer.alexb.diaryforthecoolestboys.Notification.NotificationUtils
 import com.google.android.material.animation.AnimationUtils.*
 import io.realm.Realm
 import io.realm.RealmConfiguration
@@ -57,7 +59,7 @@ import jp.wasabeef.recyclerview.animators.*
 class MainActivity : AppCompatActivity() {
 
     private var isBarAnimateEnd = true
-    private lateinit var realm: Realm
+    lateinit var realm: Realm
     lateinit var mRealmConfiguration: RealmConfiguration
     lateinit var fire: MyFirebase
     lateinit var data: MyData
@@ -70,10 +72,10 @@ class MainActivity : AppCompatActivity() {
     private var isCompletedListGroupExpanded = false
     private val handler = Handler()
     var mFragmentManager: FragmentManager = fragmentManager
-    private var mTasks = ArrayList<Task>()
-    private var mCompletedTasks = ArrayList<CompletedTask>()
+    var mTasks = ArrayList<Task>()
+    var mCompletedTasks = ArrayList<CompletedTask>()
     var mTaskLists = ArrayList<TaskList>()
-    private lateinit var taskListGroupAdapter: TasksRecyclerViewAdapter
+    lateinit var taskListGroupAdapter: TasksRecyclerViewAdapter
     lateinit var completedTasksListGroupAdapter: CompletedTasksRecyclerViewAdapter
     companion object {
         private const val TAG: String = "Main"
@@ -103,8 +105,13 @@ class MainActivity : AppCompatActivity() {
         onNavItemSelected(false)
         ///////////////////////
 
+
         fab.setOnClickListener {
             fabOnClick()
+        }
+
+        changeTaskListBtn.setOnClickListener {
+            changeListOnClick()
         }
 
         chipAddDate.onCheckedChangeListener = { view: CheckableChipView, isChecked: Boolean ->
@@ -146,6 +153,18 @@ class MainActivity : AppCompatActivity() {
             snacks.snack("Authentication access!",Snackbar.LENGTH_LONG,R.color.colorBackSnackbar,"OK",R.color.colorOkActionSnackbar)
         if (intent.hasExtra(INTENT_ADD_LIST_ID))
             data = intent.getParcelableExtra(INTENT_ADD_LIST_ID)
+        if (intent.getBooleanExtra("notification", false)){
+            val id = intent.getIntExtra("id", -1)
+            val task = realm
+                .where<Task>()
+                .`in`("notificationId", arrayOf(id))
+                .findFirst()
+            realm.executeTransaction {
+                task?.notificationId = null
+            }
+
+
+        }
     }
 
     override fun onStart() {
@@ -158,10 +177,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun signOut() {
-        // Firebase sign out
         fire.mAuth.signOut()
-
-        // Google sign out
         fire.mGoogleSignInClient.signOut().addOnCompleteListener(this) {
             updateUI(null)
         }
@@ -211,6 +227,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun changeListOnClick(){
+        val changeListBottomNavigationDrawerFragment = ChangeListBottomNavigationDrawerFragment()
+        changeListBottomNavigationDrawerFragment.show(supportFragmentManager,changeListBottomNavigationDrawerFragment.tag)
+    }
+
     private fun chipDateOnChecked(isChecked: Boolean){
         when {
             (isChecked && !isAdd) -> {
@@ -239,7 +260,8 @@ class MainActivity : AppCompatActivity() {
                 taskDetailsEditText.requestFocus()
                 Thread(Runnable {
                     TimeUnit.MILLISECONDS.sleep(300)
-                    handler.post {  val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    handler.post {
+                        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                         imm.showSoftInput(taskDetailsEditText, InputMethodManager.SHOW_IMPLICIT)
                     }
                 }).start()
@@ -308,7 +330,7 @@ class MainActivity : AppCompatActivity() {
                         isChange = false
                         when{
                             !isCompleted -> { taskListGroupAdapter.deleteTask(data.position,snacks) }
-                            isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position) }
+                            isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position, showCompletionBtnWhenDeleted) }
                         }
                         updateBarUI(false)
                     }
@@ -398,7 +420,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private fun updateBarUI(b:Boolean){
+    fun updateBarUI(b:Boolean){
         when (b) {
             true -> {
                 progressBarMain.cancelAnimation()
@@ -431,6 +453,7 @@ class MainActivity : AppCompatActivity() {
                     chipAddDetails.isClickable = true
 
                 }
+                changeTaskListBtn.visibility = View.GONE
                 setUiAlpha(b)
                 fab.setImageDrawable(getDrawable(R.drawable.avd_done_to_add))
                 val icon = fab.drawable as AnimatedVectorDrawable
@@ -459,6 +482,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateUIWhenTaskTextIsClicked(taskText: String?, taskDetailsText: String?, _notificationDate: Any?){
+        changeTaskListBtn.visibility = View.VISIBLE
         taskEditText.setText(taskText)
         val dateFormat = SimpleDateFormat("yyyy MMMM dd, h:mm a")
         val notificationDate = if (_notificationDate != null) dateFormat.format((_notificationDate as Date).time) else ""
@@ -582,7 +606,7 @@ class MainActivity : AppCompatActivity() {
             fire.deleteTaskList(title)
 
             data.title = "My Tasks"
-            data.id = R.id.my_tasks_list.toLong()
+            data.listId = R.id.my_tasks_list.toLong()
             snacks.snack("List removed", Snackbar.LENGTH_LONG, R.color.colorBackSnackbar)
             initTasksList()
             onNavItemSelected(false)
@@ -768,6 +792,7 @@ class MainActivity : AppCompatActivity() {
         Log.w(TAG, "initRecyclerView")
         taskListGroupAdapter = TasksRecyclerViewAdapter(
             this,
+            this@MainActivity,
             mTasks,
             realm,
             data,
@@ -789,6 +814,7 @@ class MainActivity : AppCompatActivity() {
                         task.map(),
                         false,
                         task.id,
+                        task.notificationId,
                         position
                     )
 
@@ -848,6 +874,7 @@ class MainActivity : AppCompatActivity() {
                                 completedTask.map(),
                                 true,
                                 completedTask.id,
+                                null,
                                 position
                             )
                         }
@@ -1170,9 +1197,9 @@ class MainActivity : AppCompatActivity() {
                 text,
                 duration)
             snackbar.setAction(actionText) {
-                when{
-                    key -> {completedTasksListGroupAdapter.addTask(task,position)}
-                    !key -> {taskListGroupAdapter.addTask(task, position)}
+                when (key){
+                    true -> {completedTasksListGroupAdapter.addTask(task,position)}
+                    false -> {taskListGroupAdapter.addTask(task, position)}
                 }
                 Log.w(TAG,"Кнопка UNDO нажата, таска вернулась из Deleted суксесфул")
                 snackbar.dismiss()
@@ -1201,6 +1228,7 @@ class MainActivity : AppCompatActivity() {
             map: Map<String, Any?>,
             key: Boolean,
             id: String?,
+            notificationId: Int?,
             position: Int
         ) {
             val screenSize = Point()
@@ -1224,7 +1252,10 @@ class MainActivity : AppCompatActivity() {
                         completedTasksListGroupAdapter.moveTaskToNotCompleted(0) // delete task from completedTasksListGroup
                         val task = Task(map)
                         task.id = id
+                        task.notificationId = notificationId
                         task.listTitle = data.title
+                        if (notificationId != null)
+                            NotificationUtils().setNotification(task, data.title, task.notificationDateOfTask!!.time, this@MainActivity)
                         val movedTask = realm
                             .where<CompletedTask>()
                             .`in`("id", arrayOf(id))
@@ -1284,7 +1315,7 @@ class MainActivity : AppCompatActivity() {
                 true -> deleteTaskList()
                 false -> {
                     when{
-                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position) }
+                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position, showCompletionBtnWhenDeleted) }
                         !isCompleted -> { taskListGroupAdapter.deleteTask(data.position,snacks) }
                     }
                     updateBarUI(false)
@@ -1305,7 +1336,7 @@ class MainActivity : AppCompatActivity() {
                 true -> deleteTaskList()
                 false -> {
                     when{
-                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position) }
+                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position, showCompletionBtnWhenDeleted) }
                         !isCompleted -> { taskListGroupAdapter.deleteTask(data.position,snacks) }
                     }
                     updateBarUI(false)
@@ -1319,7 +1350,7 @@ class MainActivity : AppCompatActivity() {
                 true -> deleteTaskList()
                 false -> {
                     when{
-                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position) }
+                        isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position, showCompletionBtnWhenDeleted) }
                         !isCompleted -> { taskListGroupAdapter.deleteTask(data.position,snacks) }
                     }
                     updateBarUI(false)
@@ -1366,6 +1397,13 @@ class MainActivity : AppCompatActivity() {
 
         }
 
+    }
+
+    val showCompletionBtnWhenDeleted = object : DeleteCompletedTaskAdapterInterface{
+
+        override fun showCompletionBtnWhenCompletedTaskDeleted() {
+            showCompletedBtnWhenTaskMoved()
+        }
     }
 
 }

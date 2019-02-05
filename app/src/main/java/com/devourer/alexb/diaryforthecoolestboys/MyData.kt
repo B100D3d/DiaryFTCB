@@ -5,7 +5,7 @@ import kotlinx.android.parcel.Parcelize
 import kotlinx.android.parcel.RawValue
 
 @Parcelize
-data class MyData(var id: Long = R.id.my_tasks_list.toLong(),
+data class MyData(var listId: Long = R.id.my_tasks_list.toLong(),
                   var title: String = "My Tasks",
                   var position: Int = -1,
                   var taskText: String? = "",

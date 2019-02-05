@@ -6,7 +6,7 @@
     <string name="my_tasks_title">My Tasks</string>
     <string name="create_new_list_title">Create new list</string>
     <string name="taskEditTextHint">New task</string>
-    <string name="add_date">Add date</string>
+    <string name="add_date">Add notification</string>
     <string name="add_details">Add details</string>
     <string name="enter_list_title">Enter list title</string>
     <string name="ok">OK</string>

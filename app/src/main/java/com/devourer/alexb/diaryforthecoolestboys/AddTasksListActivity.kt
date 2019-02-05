@@ -151,7 +151,7 @@ class AddTasksListActivity : AppCompatActivity() {
         realm.executeTransaction {
             it.insert(taskList)
         }
-        data.id = rand
+        data.listId = rand
         data.title = taskListName
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         var view = currentFocus
