@@ -19,8 +19,8 @@ class NotificationUtils {
     lateinit var realm: Realm
     private var mNotificationId: Int = -1
     private val idList = ArrayList<Int?>()
-    private var taskText: String? = null
-    private var taskDetails: String? = null
+    private var taskText: String = ""
+    private var taskDetails: String = ""
 
     fun setNotification(task: Task, title: String,time: Long, activity: Activity){
         Log.w(TAG, "setNotification | CurrentTime -> ${Calendar.getInstance().timeInMillis} | nTime -> $time")
@@ -34,14 +34,14 @@ class NotificationUtils {
             val alarmIntent = Intent(activity.applicationContext, NotificationReceiver::class.java)
 
             alarmIntent.putExtra("timestamp",time)
-            alarmIntent.putExtra("text",taskText)
+            alarmIntent.putExtra("text", taskText)
             alarmIntent.putExtra("details", taskDetails)
             alarmIntent.putExtra("nId", mNotificationId)
             alarmIntent.putExtra("id", task.id)
             alarmIntent.putExtra("title", task.listTitle)
 
 
-            val pendingIntent = PendingIntent.getBroadcast(activity, mNotificationId, alarmIntent, PendingIntent.FLAG_CANCEL_CURRENT)
+            val pendingIntent = PendingIntent.getBroadcast(activity, mNotificationId, alarmIntent, PendingIntent.FLAG_UPDATE_CURRENT)
             alarmManager.setExact(AlarmManager.RTC_WAKEUP, time, pendingIntent)
         }
 
@@ -80,8 +80,11 @@ class NotificationUtils {
             .`in`("id", arrayOf(taskId))
             .findFirst()
 
-        taskText = task?.taskText
-        taskDetails = task?.taskDetailsText
+        Log.w(TAG, "taskText — ${task?.taskText} | taskDetails — ${task?.taskDetailsText}")
+        if (task != null){
+            taskText = task.taskText
+            taskDetails = task.taskDetailsText
+        }
     }
 
 }

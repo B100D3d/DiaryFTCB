@@ -5,16 +5,16 @@ import java.util.*
 
 open class CompletedTask() : RealmObject() {
 
-    var completedTaskText: String? = ""
-    var completedTaskDetailsText: String? = ""
+    var completedTaskText: String = ""
+    var completedTaskDetailsText: String = ""
     var listTitle: String? = ""
     var dateOfCompletedTask: Date? = null
     var completionDateOfCompletedTask: Date? = null
     var notificationDateOfCompletedTask: Date? = null
     var id: String? = ""
 
-    constructor(_completedTaskText: String?,
-                _completedTaskDetailsText: String?,
+    constructor(_completedTaskText: String,
+                _completedTaskDetailsText: String,
                 _dateOfCompletedTask: Any?,
                 _completionDateOfCompletedTask: Any?,
                 _notificationDateOfCompletedTask: Any?,
@@ -31,8 +31,8 @@ open class CompletedTask() : RealmObject() {
     }
 
     constructor(_map: Map<String,Any?>) : this() {
-        completedTaskText = _map["text"] as String?
-        completedTaskDetailsText = _map["details_text"] as String?
+        completedTaskText = _map["text"] as String
+        completedTaskDetailsText = _map["details_text"] as String
         dateOfCompletedTask = _map["date"] as Date
         completionDateOfCompletedTask = _map["completion_date"] as Date
         notificationDateOfCompletedTask = if(_map["notification_date"] != null) _map["notification_date"] as Date else null

@@ -71,7 +71,7 @@ class AddTasksListActivity : AppCompatActivity() {
                     var view = currentFocus
                     if (view == null)
                         view = View(this)
-                    handler.post {imm.hideSoftInputFromWindow(view.windowToken, 0)}
+                    handler.post {imm.hideSoftInputFromWindow(view?.windowToken, 0)}
                     TimeUnit.MILLISECONDS.sleep(300)
                     handler.post {snack("Too many characters in the title!", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)}
                 }).start()
@@ -131,11 +131,6 @@ class AddTasksListActivity : AppCompatActivity() {
             TimeUnit.MILLISECONDS.sleep(300)
             handler.post {super.onBackPressed()}
         }).start()
-    }
-
-    override fun onBackPressed() {
-        //updateUi(false)
-        super.onBackPressed()
     }
 
     private fun updateUi() {

@@ -14,6 +14,7 @@ import com.github.florent37.singledateandtimepicker.SingleDateAndTimePicker
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.date_bottomsheet.*
 import java.util.*
 
@@ -41,9 +42,13 @@ class DatePickerBottomNavigationDrawerFragment : BottomSheetDialogFragment(){
 
         okBtn.setOnClickListener {
             date = picker.date
-            mainActivity.dateAndTime.time = date
-            mainActivity.setInitialDateTime()
-            isClicked = true
+            if (date >= Date()){
+                mainActivity.dateAndTime.time = date
+                mainActivity.setInitialDateTime()
+                isClicked = true
+            }
+            else
+                mainActivity.snacks.snack("You can't set past time", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)
             dismiss()
         }
 
@@ -67,12 +72,12 @@ class DatePickerBottomNavigationDrawerFragment : BottomSheetDialogFragment(){
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
         val window = dialog.window
-        val wlp = window.attributes
-        wlp.windowAnimations = R.style.DialogAnimation
+        val wlp = window?.attributes
+        wlp?.windowAnimations = R.style.DialogAnimation
 
 
-        dialog.setOnShowListener { dialog ->
-            val d = dialog as BottomSheetDialog
+        dialog.setOnShowListener { dialogInterface ->
+            val d = dialogInterface as BottomSheetDialog
 
             val bottomSheet = d.findViewById<View>(R.id.design_bottom_sheet) as FrameLayout?
             val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)

@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.devourer.alexb.diaryforthecoolestboys.CompletedTask
 import com.devourer.alexb.diaryforthecoolestboys.MyData
 import com.devourer.alexb.diaryforthecoolestboys.MyFirebase
@@ -66,6 +67,11 @@ class DoneTaskReceiver : BroadcastReceiver() {
             task.deleteFromRealm()
         }
         realm.close()
+
+        val doneIntent = Intent("notification")
+        doneIntent.putExtra("done",true)
+        doneIntent.putExtra("id", id)
+        LocalBroadcastManager.getInstance(context.applicationContext).sendBroadcast(doneIntent)
         Log.w(TAG, "DoneTaskReceiver | onReceive | end")
 
     }

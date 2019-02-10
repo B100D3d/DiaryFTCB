@@ -6,16 +6,16 @@ import java.util.*
 
 open class Task() : RealmObject() {
 
-    var taskText: String? = ""
-    var taskDetailsText: String? = ""
+    var taskText: String = ""
+    var taskDetailsText: String = ""
     var listTitle: String? = ""
     var dateOfTasks: Date? = null
     var notificationDateOfTask: Date? = null
     var id: String? = ""
     var notificationId: Int? = null
 
-    constructor(_taskText: String?,
-                _taskDetailsText: String?,
+    constructor(_taskText: String,
+                _taskDetailsText: String,
                 _dateOfTasks: Any?,
                 _notificationDateOfTask: Any?,
                 _id: String?,
@@ -49,8 +49,8 @@ open class Task() : RealmObject() {
     }
 
     constructor(_map: Map<String,Any?>) : this() {
-        taskText = _map["text"] as String?
-        taskDetailsText = _map["details_text"] as String?
+        taskText = _map["text"] as String
+        taskDetailsText = _map["details_text"] as String
         dateOfTasks = _map["date"] as Date
         notificationDateOfTask = if(_map["notification_date"] != null) _map["notification_date"] as Date else null
     }

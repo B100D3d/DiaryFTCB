@@ -4,7 +4,9 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.util.Log
 import java.lang.Math.*
+import java.util.*
 
 internal class Snowflake(val params: Params) {
     private var size: Int = 0
@@ -24,7 +26,7 @@ internal class Snowflake(val params: Params) {
     private val randomizer by lazy { Randomizer() }
 
     var shouldRecycleFalling = true
-    private var stopped = false;
+    private var stopped = false
 
     init {
         reset()
@@ -39,8 +41,14 @@ internal class Snowflake(val params: Params) {
 
         val speed = ((size - params.sizeMinInPx).toFloat() / (params.sizeMaxInPx - params.sizeMinInPx) *
                 (params.speedMax - params.speedMin) + params.speedMin)
+        //Log.w("Main", "speed -> $speed")
         val angle = toRadians(randomizer.randomDouble(params.angleMax) * randomizer.randomSignum())
-        speedX = speed * sin(angle)
+        //Log.w("Main", "angle -> $angle")
+        speedX = if (Random().nextInt(8) != 1) {
+            speed * cos(angle) / 4
+        } else
+            speed * sin(angle)
+        //Log.w("Main", "speedX -> $speedX")
         speedY = speed * cos(angle)
 
         alpha = randomizer.randomInt(params.alphaMin, params.alphaMax)
@@ -62,6 +70,7 @@ internal class Snowflake(val params: Params) {
     }
 
     fun update() {
+
         positionX += speedX
         positionY += speedY
         if (positionY > params.parentHeight) {

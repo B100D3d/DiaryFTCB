@@ -11,7 +11,6 @@ class SplashActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG: String = "Main"
-        const val INTENT_ID = "auth"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,14 +25,17 @@ class SplashActivity : AppCompatActivity() {
 
     private fun updateUI(currentUser: FirebaseUser?) {
         if (currentUser != null) {
-                val intent = Intent(this,MainActivity::class.java)
-                intent.putExtra(INTENT_ID,false)
-                startActivity(intent)
+                val mainIntent = Intent(this,MainActivity::class.java)
+                if (intent.getBooleanExtra("notification", false)){
+                    mainIntent.putExtra("notification", intent.getBooleanExtra("notification", false))
+                    mainIntent.putExtra("title", intent.getStringExtra("title"))
+                }
+                startActivity(mainIntent)
                 finish()
         }
         else{
-            val intent = Intent(this,LoginActivity::class.java)
-            startActivity(intent)
+            val loginIntent = Intent(this,LoginActivity::class.java)
+            startActivity(loginIntent)
             finish()
         }
 

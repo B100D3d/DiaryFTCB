@@ -23,7 +23,7 @@ class MyFirebase (context: Context, _data: MyData){
         .requestEmail()
         .build()!!
     var mGoogleSignInClient: GoogleSignInClient = GoogleSignIn.getClient(context, gso)
-    private val uId = mAuth.uid!!
+    val uId = mAuth.uid!!
     private val user = mAuth.currentUser!!
     val name = user.displayName!!
     val email = user.email!!

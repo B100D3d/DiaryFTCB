@@ -114,8 +114,6 @@ class CompletedTasksRecyclerViewAdapter(
         var completedTaskText: TextView = itemView.findViewById(R.id.completedTaskText)
         var completedTaskDetailsText: TextView = itemView.findViewById(R.id.completedDetailsTaskText)
         var completedTaskNotificationDateText: TextView = itemView.findViewById(R.id.completedTaskNotificationDateText)
-        var parentLayout: LinearLayout = itemView.findViewById(R.id.parent_layout_)
-        //var taskCompletedImageLayout: LinearLayout = itemView.findViewById(R.listId.taskCompletedImageLayout)
         var taskCompletedImageView: ImageView = itemView.findViewById(R.id.taskCompletedImage)
         var taskCompletedImageAnim: LottieAnimationView = itemView.findViewById(R.id.taskCompletedImageAnim)
         var completeTaskTextLayout: LinearLayout = itemView.findViewById(R.id.completeTaskTextLayout)
@@ -213,21 +211,21 @@ class CompletedTasksRecyclerViewAdapter(
     }
 
     private fun setTaskText(holder: ViewHolder, position: Int){
-        if (mCompletedTasks[position].completedTaskText!!.length > 55){
+        if (mCompletedTasks[position].completedTaskText.length > 55){
             var temp = ""
             for (i in 0..54){
-                temp += mCompletedTasks[position].completedTaskText!![i]
+                temp += mCompletedTasks[position].completedTaskText[i]
             }
             temp += "..."
             holder.completedTaskText.text = temp
         }
-        else if (mCompletedTasks[position].completedTaskText!!.contains("\n")){
+        else if (mCompletedTasks[position].completedTaskText.contains("\n")){
             var temp = ""
-            for (i in 0 until mCompletedTasks[position].completedTaskText!!.length){
-                val it: String = mCompletedTasks[position].completedTaskText!![i].toString()
+            for (i in 0 until mCompletedTasks[position].completedTaskText.length){
+                val it: String = mCompletedTasks[position].completedTaskText[i].toString()
                 if (it == "\n")
                     break
-                temp += mCompletedTasks[position].completedTaskText!![i]
+                temp += mCompletedTasks[position].completedTaskText[i]
             }
             temp += "..."
             holder.completedTaskText.text = temp
@@ -238,22 +236,22 @@ class CompletedTasksRecyclerViewAdapter(
 
     private fun setTasksDetailsText(holder: ViewHolder, position: Int) {
         holder.completedTaskDetailsText.visibility = View.GONE
-        if (!mCompletedTasks[position].completedTaskDetailsText.isNullOrBlank()) {
+        if (!mCompletedTasks[position].completedTaskDetailsText.isBlank()) {
             holder.completedTaskDetailsText.visibility = View.VISIBLE
-            if (mCompletedTasks[position].completedTaskDetailsText!!.length > 55) {
+            if (mCompletedTasks[position].completedTaskDetailsText.length > 55) {
                 var temp = ""
                 for (i in 0..54) {
-                    temp += mCompletedTasks[position].completedTaskDetailsText!![i]
+                    temp += mCompletedTasks[position].completedTaskDetailsText[i]
                 }
                 temp += "..."
                 holder.completedTaskDetailsText.text = temp
-            } else if (mCompletedTasks[position].completedTaskDetailsText!!.contains("\n")) {
+            } else if (mCompletedTasks[position].completedTaskDetailsText.contains("\n")) {
                 var temp = ""
-                for (i in 0 until mCompletedTasks[position].completedTaskDetailsText!!.length) {
-                    val it: String = mCompletedTasks[position].completedTaskDetailsText!![i].toString()
+                for (i in 0 until mCompletedTasks[position].completedTaskDetailsText.length) {
+                    val it: String = mCompletedTasks[position].completedTaskDetailsText[i].toString()
                     if (it == "\n")
                         break
-                    temp += mCompletedTasks[position].completedTaskDetailsText!![i]
+                    temp += mCompletedTasks[position].completedTaskDetailsText[i]
                 }
                 temp += "..."
                 holder.completedTaskDetailsText.text = temp

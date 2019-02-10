@@ -4,8 +4,10 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.app.FragmentManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Paint
 import android.graphics.Point
 import android.graphics.Rect
@@ -35,6 +37,7 @@ import java.util.concurrent.TimeUnit
 import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
 import androidx.core.widget.NestedScrollView
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.devourer.alexb.diaryforthecoolestboys.Adapters.*
 import com.devourer.alexb.diaryforthecoolestboys.FingerprintLibrary.FingerprintDialogBuilder
 import com.devourer.alexb.diaryforthecoolestboys.Fragments.DatePickerBottomNavigationDrawerFragment
@@ -154,6 +157,7 @@ class MainActivity : AppCompatActivity() {
         if (intent.hasExtra(INTENT_ADD_LIST_ID))
             data = intent.getParcelableExtra(INTENT_ADD_LIST_ID)
         if (intent.getBooleanExtra("notification", false)){
+            data.title = intent.getStringExtra("title")
             val id = intent.getIntExtra("id", -1)
             val task = realm
                 .where<Task>()
@@ -162,16 +166,28 @@ class MainActivity : AppCompatActivity() {
             realm.executeTransaction {
                 task?.notificationId = null
             }
-
-
         }
     }
 
     override fun onStart() {
+        Log.w(TAG, "onStart")
         super.onStart()
     }
 
+    override fun onResume() {
+        Log.w(TAG, "onResume")
+        super.onResume()
+        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, IntentFilter("notification"))
+    }
+
+    override fun onPause() {
+        Log.w(TAG, "onPause")
+        super.onPause()
+        //LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver)
+    }
+
     override fun onDestroy() {
+        Log.w(TAG, "onDestroy")
         super.onDestroy()
         realm.close()
     }
@@ -453,7 +469,6 @@ class MainActivity : AppCompatActivity() {
                     chipAddDetails.isClickable = true
 
                 }
-                changeTaskListBtn.visibility = View.GONE
                 setUiAlpha(b)
                 fab.setImageDrawable(getDrawable(R.drawable.avd_done_to_add))
                 val icon = fab.drawable as AnimatedVectorDrawable
@@ -465,6 +480,7 @@ class MainActivity : AppCompatActivity() {
                     handler.post {
                         bar.replaceMenu(R.menu.main_menu)
                         bar.setNavigationIcon(R.drawable.ic_menu_white_24dp)
+                        changeTaskListBtn.visibility = View.GONE
                         taskEditText.setText("")
                         taskDetailsEditText.setText("")
                         taskDetailsEditTextInputLayout.visibility = View.INVISIBLE
@@ -483,6 +499,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateUIWhenTaskTextIsClicked(taskText: String?, taskDetailsText: String?, _notificationDate: Any?){
         changeTaskListBtn.visibility = View.VISIBLE
+        changeTaskListBtn.text = data.title
         taskEditText.setText(taskText)
         val dateFormat = SimpleDateFormat("yyyy MMMM dd, h:mm a")
         val notificationDate = if (_notificationDate != null) dateFormat.format((_notificationDate as Date).time) else ""
@@ -511,9 +528,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun updateUIWhenCompletedTaskTextIsClicked(taskText: String?, taskDetailsText: String?, _notificationDate: Any?){
-        Log.w(TAG,"paintFlags -> ${taskEditText.paintFlags}")
+        //Log.w(TAG,"paintFlags -> ${taskEditText.paintFlags}")
         taskEditText.paintFlags = Paint.STRIKE_THRU_TEXT_FLAG
-        Log.w(TAG,"paintFlags! -> ${taskEditText.paintFlags}")
+        //Log.w(TAG,"paintFlags! -> ${taskEditText.paintFlags}")
         taskEditText.isEnabled = false
         chipAddDetails.isClickable = false
         chipAddDate.isClickable = false
@@ -571,13 +588,15 @@ class MainActivity : AppCompatActivity() {
             .where<TaskList>()
             .findAll()
         taskLists.forEach {
+            if (it.nameOfTaskList == data.title)
+                data.listId = it.taskListId
             mTaskLists.add(it)
         }
     }
 
     fun createNewTasksList(){
         val intent = Intent(this,AddTasksListActivity::class.java)
-        intent.putExtra(INTENT_ADD_LIST_ID,data)
+        intent.putExtra(INTENT_ADD_LIST_ID, data)
         startActivity(intent)
     }
 
@@ -1174,10 +1193,10 @@ class MainActivity : AppCompatActivity() {
             backColor: Int,
             actionText: String,
             actionColor: Int,
-            taskText: String?,
+            taskText: String,
             taskDate: Any?,
             completionDate: Any?,
-            taskDetailsText: String?,
+            taskDetailsText: String,
             notificationDate: Any?,
             taskId: String?,
             key: Boolean,
@@ -1403,6 +1422,19 @@ class MainActivity : AppCompatActivity() {
 
         override fun showCompletionBtnWhenCompletedTaskDeleted() {
             showCompletedBtnWhenTaskMoved()
+        }
+    }
+
+    private val mReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+
+            if (intent != null && intent.getBooleanExtra("done", false)){
+                val id: String? = intent.getStringExtra("id")
+                if (id != null) {
+                    taskListGroupAdapter.moveTaskAfterNotificationDone(id)
+                    showCompletedBtnWhenTaskMoved()
+                }
+            }
         }
     }
 

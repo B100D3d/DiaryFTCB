@@ -3,6 +3,7 @@ package com.devourer.alexb.diaryforthecoolestboys.Adapters
 import android.animation.Animator
 import android.app.Activity
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -94,14 +95,13 @@ class TasksRecyclerViewAdapter(
         var taskText: TextView = itemView.findViewById(R.id.taskText)
         var taskDetailsText: TextView = itemView.findViewById(R.id.detailsTaskText)
         var taskNotificationDateText: TextView = itemView.findViewById(R.id.taskNotificationDateText)
-        var parentLayout: LinearLayout = itemView.findViewById(R.id.parent_layout)
         var taskNotCompleteImageView: ImageView = itemView.findViewById(R.id.taskNotCompleteImage)
         var taskNotCompleteImageAnim: LottieAnimationView = itemView.findViewById(R.id.taskNotCompleteImageAnim)
         var taskTextLayout: LinearLayout = itemView.findViewById(R.id.taskTextLayout)
 
     }
 
-    fun imageViewOnClick(holder: ViewHolder){
+    private fun imageViewOnClick(holder: ViewHolder){
         holder.taskNotCompleteImageView.visibility = View.GONE
         holder.taskNotCompleteImageAnim.visibility = View.VISIBLE
         holder.taskNotCompleteImageAnim.playAnimation()
@@ -113,8 +113,11 @@ class TasksRecyclerViewAdapter(
                 val position = holder.adapterPosition
                 val task = Task(mTasks[position])
                 val completionDate = Date()
-                if (task.notificationId != null)
+                if (task.notificationId != null) {
                     cancelAlarm(task.notificationId as Int)
+                    val nm = mContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    nm.cancel(task.notificationId as Int)
+                }
                 addTaskToCompleted(position, completionDate) // remove task from this list and add to firestore
                 mAdapterInterface.taskNotCompleteImageViewOnClick(task, completionDate, position)
                 holder.taskNotCompleteImageView.visibility = View.VISIBLE
@@ -161,7 +164,7 @@ class TasksRecyclerViewAdapter(
     fun addTask(task: Any, position: Int){
         mTasks.add(position, task as Task)
         if (task.notificationId != null)
-            NotificationUtils().setNotification(task,data.title,task.notificationDateOfTask!!.time,mActivity)
+            NotificationUtils().setNotification(task,data.title,task.notificationDateOfTask!!.time, mActivity)
         notifyItemInserted(position)
         realm.executeTransaction {
             it.insert(task)
@@ -179,6 +182,16 @@ class TasksRecyclerViewAdapter(
         mTasks.removeAt(position)
         notifyItemRemoved(position)
 
+    }
+
+    fun moveTaskAfterNotificationDone(id: String){
+        for ((i) in (0 until mTasks.size).withIndex()){
+            if (mTasks[i].id == id){
+                mTasks.removeAt(i)
+                notifyItemRemoved(i)
+                break
+            }
+        }
     }
 
     fun changeTask(
@@ -204,7 +217,7 @@ class TasksRecyclerViewAdapter(
             else null
         val changedTask = Task(taskEditText, taskDetailsEditText, date, changedNotificationDate, id, data.title)
         changedTask.notificationId = notificationId
-        if ((taskEditText != mTasks[position].taskText || taskDetailsEditText != mTasks[position].taskDetailsText || changedNotificationDate != _notificationDate) && !taskEditText.isNullOrEmpty()) {
+        if ((taskEditText != mTasks[position].taskText || taskDetailsEditText != mTasks[position].taskDetailsText || changedNotificationDate != _notificationDate) && !taskEditText.isEmpty()) {
             mTasks[position] = changedTask
             notifyItemChanged(position)
             val task = realm
@@ -223,6 +236,9 @@ class TasksRecyclerViewAdapter(
                 NotificationUtils().setNotification(changedTask, data.title, _dateAndTime.timeInMillis, mActivity)
             } else if (changedNotificationDate == null && notificationId != null){
                 cancelAlarm(notificationId)
+            } else if ((changedNotificationDate as Date).time > Date().time){
+                cancelAlarm(notificationId as Int)
+                NotificationUtils().setNotification(changedTask, data.title, changedNotificationDate.time, mActivity)
             }
             snackInterface.snack("Task changed", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)
             //Log.w(TAG,"ID -> ${mTasks[position].listId}")
@@ -250,8 +266,11 @@ class TasksRecyclerViewAdapter(
 
     fun deleteTask(position: Int, snackInterface: Snacks){
         val task = Task(mTasks[position])
-        if (task.notificationId != null)
+        if (task.notificationId != null) {
             cancelAlarm(task.notificationId as Int)
+            val nm = mContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(task.notificationId as Int)
+        }
         mTasks.removeAt(position)
         notifyItemRemoved(position)
         val deletedTask = realm
@@ -288,21 +307,21 @@ class TasksRecyclerViewAdapter(
     }
 
     private fun setTaskText(holder: ViewHolder, position: Int){
-        if (mTasks[position].taskText!!.length > 55){
+        if (mTasks[position].taskText.length > 55){
             var temp = ""
             for (i in 0..54){
-                temp += mTasks[position].taskText!![i]
+                temp += mTasks[position].taskText[i]
             }
             temp += "..."
             holder.taskText.text = temp
         }
-        else if (mTasks[position].taskText!!.contains("\n")){
+        else if (mTasks[position].taskText.contains("\n")){
             var temp = ""
-            for (i in 0 until mTasks[position].taskText!!.length){
-                val it: String = mTasks[position].taskText!![i].toString()
+            for (i in 0 until mTasks[position].taskText.length){
+                val it: String = mTasks[position].taskText[i].toString()
                 if (it == "\n")
                     break
-                temp += mTasks[position].taskText!![i]
+                temp += mTasks[position].taskText[i]
             }
             temp += "..."
             holder.taskText.text = temp
@@ -313,22 +332,22 @@ class TasksRecyclerViewAdapter(
 
     private fun setTasksDetailsText(holder: ViewHolder, position: Int) {
         holder.taskDetailsText.visibility = View.GONE
-        if (!mTasks[position].taskDetailsText.isNullOrBlank()) {
+        if (!mTasks[position].taskDetailsText.isBlank()) {
             holder.taskDetailsText.visibility = View.VISIBLE
-            if (mTasks[position].taskDetailsText!!.length > 55) {
+            if (mTasks[position].taskDetailsText.length > 55) {
                 var temp = ""
                 for (i in 0..54) {
-                    temp += mTasks[position].taskDetailsText!![i]
+                    temp += mTasks[position].taskDetailsText[i]
                 }
                 temp += "..."
                 holder.taskDetailsText.text = temp
-            } else if (mTasks[position].taskDetailsText!!.contains("\n")) {
+            } else if (mTasks[position].taskDetailsText.contains("\n")) {
                 var temp = ""
-                for (i in 0 until mTasks[position].taskDetailsText!!.length) {
-                    val it: String = mTasks[position].taskDetailsText!![i].toString()
+                for (i in 0 until mTasks[position].taskDetailsText.length) {
+                    val it: String = mTasks[position].taskDetailsText[i].toString()
                     if (it == "\n")
                         break
-                    temp += mTasks[position].taskDetailsText!![i]
+                    temp += mTasks[position].taskDetailsText[i]
                 }
                 temp += "..."
                 holder.taskDetailsText.text = temp

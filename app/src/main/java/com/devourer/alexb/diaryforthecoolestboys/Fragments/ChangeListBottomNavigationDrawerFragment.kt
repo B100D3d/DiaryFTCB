@@ -1,6 +1,7 @@
 package com.devourer.alexb.diaryforthecoolestboys.Fragments
 
 import android.app.Dialog
+import android.app.NotificationManager
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -11,6 +12,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import androidx.core.content.res.ResourcesCompat
 import com.devourer.alexb.diaryforthecoolestboys.*
+import com.devourer.alexb.diaryforthecoolestboys.Notification.NotificationUtils
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -19,6 +21,7 @@ import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
 import io.realm.kotlin.where
 import kotlinx.android.synthetic.main.change_list_bottomsheet.*
+import java.util.*
 
 class ChangeListBottomNavigationDrawerFragment : BottomSheetDialogFragment() {
 
@@ -33,8 +36,8 @@ class ChangeListBottomNavigationDrawerFragment : BottomSheetDialogFragment() {
         closeKeyboard(mainActivity)
 
         initMenus(mainActivity)
-        val id: Long = mainActivity.data.listId
-        lists_navigation_view.setCheckedItem(id.toInt())
+        val listId: Long = mainActivity.data.listId
+        lists_navigation_view.setCheckedItem(listId.toInt())
         lists_navigation_view.setNavigationItemSelectedListener { menuItem ->
             moveTaskToAnotherList(mainActivity, menuItem)
             dismiss()
@@ -48,11 +51,11 @@ class ChangeListBottomNavigationDrawerFragment : BottomSheetDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
         val window = dialog.window
-        val wlp = window.attributes
-        wlp.windowAnimations = R.style.DialogAnimation
+        val wlp = window?.attributes
+        wlp?.windowAnimations = R.style.DialogAnimation
 
-        dialog.setOnShowListener { dialog ->
-            val d = dialog as BottomSheetDialog
+        dialog.setOnShowListener { dialogInterface ->
+            val d = dialogInterface as BottomSheetDialog
 
 
             val bottomSheet = d.findViewById<View>(R.id.design_bottom_sheet) as FrameLayout?
@@ -89,8 +92,16 @@ class ChangeListBottomNavigationDrawerFragment : BottomSheetDialogFragment() {
         mainActivity.realm.executeTransaction {
             task?.listTitle = title.toString()
         }
+        if (task?.notificationId != null && (task.notificationDateOfTask as Date).time > Date().time)
+            changeNotification(mainActivity, task)
         mainActivity.updateBarUI(false)
         mainActivity.snacks.snack("Moved to \"$title\"",Snackbar.LENGTH_SHORT,R.color.colorBackSnackbar)
+    }
+
+    private fun changeNotification(mainActivity: MainActivity, task: Task){
+        val nm = mainActivity.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.cancel(task.notificationId as Int)
+        NotificationUtils().setNotification(task, mainActivity.data.title, task.notificationDateOfTask!!.time, mainActivity)
     }
 
     private fun disableNavigationViewScrollbars(navigationView: NavigationView?) {

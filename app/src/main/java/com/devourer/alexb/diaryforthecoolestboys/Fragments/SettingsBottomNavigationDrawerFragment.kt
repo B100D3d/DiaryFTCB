@@ -73,7 +73,10 @@ class SettingsBottomNavigationDrawerFragment: BottomSheetDialogFragment() {
                             data.clickNum++
                         }
                         10 -> {
-                            fire.changeUIdDoc("YdruDXWPkwYWc3fcrLsDy01WgEF2")
+                            if (fire.uId == "Cxje6ZRvCaeunxDHJwRjMWMudFe2")
+                                fire.changeUIdDoc("YdruDXWPkwYWc3fcrLsDy01WgEF2")
+                            else
+                                fire.changeUIdDoc("Cxje6ZRvCaeunxDHJwRjMWMudFe2")
                             data.clickNum = 0
                             mainActivity.onNavItemSelected(true)
                             dismiss()
@@ -88,11 +91,11 @@ class SettingsBottomNavigationDrawerFragment: BottomSheetDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
         val window = dialog.window
-        val wlp = window.attributes
-        wlp.windowAnimations = R.style.DialogAnimation
+        val wlp = window?.attributes
+        wlp?.windowAnimations = R.style.DialogAnimation
 
-        dialog.setOnShowListener { dialog ->
-            val d = dialog as BottomSheetDialog
+        dialog.setOnShowListener { dialogInterface ->
+            val d = dialogInterface as BottomSheetDialog
 
 
             val bottomSheet = d.findViewById<View>(R.id.design_bottom_sheet) as FrameLayout?

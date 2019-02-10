@@ -80,12 +80,12 @@ class NotificationReceiver : BroadcastReceiver() {
             doneTaskIntent.putExtra("id", id)
             doneTaskIntent.putExtra("title", title)
 
+
             Log.w(TAG, "text -> $taskText | details -> $taskDetailsText")
             val nTitle = taskText
             val message = taskDetailsText
 
-            notifyIntent.putExtra("title", nTitle)
-            notifyIntent.putExtra("message", message)
+            notifyIntent.putExtra("title", title)
             notifyIntent.putExtra("id",mNotificationId)
             notifyIntent.putExtra("notification", true)
 
@@ -130,6 +130,7 @@ class NotificationReceiver : BroadcastReceiver() {
 
             val notificationManager = context?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.notify(mNotificationId,mNotification)
+            Log.w(TAG, "notificationManager.notify")
 
         }
 
