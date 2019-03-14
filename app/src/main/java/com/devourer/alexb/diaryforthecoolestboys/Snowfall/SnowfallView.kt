@@ -1,13 +1,16 @@
 package com.devourer.alexb.diaryforthecoolestboys.Snowfall
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import com.devourer.alexb.diaryforthecoolestboys.R
+import java.util.*
 
 class SnowfallView(context: Context, attrs: AttributeSet) : View(context, attrs) {
     private val DEFAULT_SNOWFLAKES_NUM = 200
@@ -21,13 +24,13 @@ class SnowfallView(context: Context, attrs: AttributeSet) : View(context, attrs)
     private val DEFAULT_SNOWFLAKES_FADING_ENABLED = false
     private val DEFAULT_SNOWFLAKES_ALREADY_FALLING = false
 
-    private val snowflakesNum: Int
-    private val snowflakeImage: Bitmap?
-    private val snowflakeAlphaMin: Int
-    private val snowflakeAlphaMax: Int
+    private var snowflakesNum: Int
+    private var snowflakeImages = ArrayList<Bitmap>()
+    private var snowflakeAlphaMin: Int
+    private var snowflakeAlphaMax: Int
     private val snowflakeAngleMax: Int
-    private val snowflakeSizeMinInPx: Int
-    private val snowflakeSizeMaxInPx: Int
+    private var snowflakeSizeMinInPx: Int
+    private var snowflakeSizeMaxInPx: Int
     private val snowflakeSpeedMin: Int
     private val snowflakeSpeedMax: Int
     private val snowflakesFadingEnabled: Boolean
@@ -40,7 +43,6 @@ class SnowfallView(context: Context, attrs: AttributeSet) : View(context, attrs)
         val a = context.obtainStyledAttributes(attrs, R.styleable.SnowfallView)
         try {
             snowflakesNum = a.getInt(R.styleable.SnowfallView_snowflakesNum, DEFAULT_SNOWFLAKES_NUM)
-            snowflakeImage = a.getDrawable(R.styleable.SnowfallView_snowflakeImage)?.toBitmap()
             snowflakeAlphaMin = a.getInt(R.styleable.SnowfallView_snowflakeAlphaMin, DEFAULT_SNOWFLAKE_ALPHA_MIN)
             snowflakeAlphaMax = a.getInt(R.styleable.SnowfallView_snowflakeAlphaMax, DEFAULT_SNOWFLAKE_ALPHA_MAX)
             snowflakeAngleMax = a.getInt(R.styleable.SnowfallView_snowflakeAngleMax, DEFAULT_SNOWFLAKE_ANGLE_MAX)
@@ -98,6 +100,7 @@ class SnowfallView(context: Context, attrs: AttributeSet) : View(context, attrs)
     }
 
     fun stopFalling() {
+        Log.w("Main", "snowflakes.size -> ${snowflakes?.size}")
         snowflakes?.forEach { it.shouldRecycleFalling = false }
     }
 
@@ -106,20 +109,7 @@ class SnowfallView(context: Context, attrs: AttributeSet) : View(context, attrs)
     }
 
     private fun createSnowflakes(): Array<Snowflake> {
-        val snowflakeParams = Snowflake.Params(
-            parentWidth = width,
-            parentHeight = height,
-            image = snowflakeImage,
-            alphaMin = snowflakeAlphaMin,
-            alphaMax = snowflakeAlphaMax,
-            angleMax = snowflakeAngleMax,
-            sizeMinInPx = snowflakeSizeMinInPx,
-            sizeMaxInPx = snowflakeSizeMaxInPx,
-            speedMin = snowflakeSpeedMin,
-            speedMax = snowflakeSpeedMax,
-            fadingEnabled = snowflakesFadingEnabled,
-            alreadyFalling = snowflakesAlreadyFalling)
-        return Array(snowflakesNum) { Snowflake(snowflakeParams) }
+        return Array(snowflakesNum) { Snowflake(getRandParams()) }
     }
 
     private fun updateSnowflakes() {
@@ -138,5 +128,65 @@ class SnowfallView(context: Context, attrs: AttributeSet) : View(context, attrs)
         init {
             start()
         }
+    }
+
+    fun setImage(sharedPreferences: SharedPreferences){
+        Log.w("Main", sharedPreferences.getString("Choose flakes", "-1"))
+        snowflakeImages.clear()
+        when (sharedPreferences.getString("Choose flakes", "-1")){
+            "flowers" -> {
+                snowflakeImages.add(context.getDrawable(R.drawable.flakes_flower_0)!!.toBitmap())
+                snowflakeImages.add(context.getDrawable(R.drawable.flakes_flower_1)!!.toBitmap())
+                setMinAndMaxSize(8, 16)
+            }
+            "snowflakes" -> {
+                snowflakeImages.add(context.getDrawable(R.drawable.flakes_snowflake_0)!!.toBitmap())
+                setMinAndMaxSize(8, 16)
+            }
+            "penis" -> {
+                snowflakeImages.add(context.getDrawable(R.drawable.flakes_penis_0)!!.toBitmap())
+                snowflakeImages.add(context.getDrawable(R.drawable.flakes_penis_1)!!.toBitmap())
+                setCount(40)
+                setMinAndMaxAlpha(200, 200)
+                setMinAndMaxSize(18, 22)
+            }
+        }
+        snowflakes = createSnowflakes()
+    }
+
+    private fun getRandBitmap() : Bitmap {
+        val rand = Random().nextInt(snowflakeImages.size)
+        return snowflakeImages[rand]
+    }
+
+    private fun getRandParams() : Snowflake.Params {
+        return Snowflake.Params(
+            parentWidth = width,
+            parentHeight = height,
+            image = getRandBitmap(),
+            alphaMin = snowflakeAlphaMin,
+            alphaMax = snowflakeAlphaMax,
+            angleMax = snowflakeAngleMax,
+            sizeMinInPx = snowflakeSizeMinInPx,
+            sizeMaxInPx = snowflakeSizeMaxInPx,
+            speedMin = snowflakeSpeedMin,
+            speedMax = snowflakeSpeedMax,
+            fadingEnabled = snowflakesFadingEnabled,
+            alreadyFalling = snowflakesAlreadyFalling
+        )
+    }
+
+    private fun setMinAndMaxSize(min: Int, max: Int){
+        snowflakeSizeMinInPx = dpToPx(min)
+        snowflakeSizeMaxInPx = dpToPx(max)
+    }
+
+    private fun setCount(count: Int){
+        snowflakesNum = count
+    }
+
+    private fun setMinAndMaxAlpha(min: Int, max: Int){
+        snowflakeAlphaMin = min
+        snowflakeAlphaMax = max
     }
 }

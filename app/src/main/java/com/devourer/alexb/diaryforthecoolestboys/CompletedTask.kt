@@ -1,9 +1,13 @@
 package com.devourer.alexb.diaryforthecoolestboys
 
+import com.google.firebase.Timestamp
 import io.realm.RealmObject
+import android.os.Parcelable
+import kotlinx.android.parcel.Parcelize
 import java.util.*
 
-open class CompletedTask() : RealmObject() {
+@Parcelize
+open class CompletedTask() : RealmObject(), Parcelable {
 
     var completedTaskText: String = ""
     var completedTaskDetailsText: String = ""
@@ -23,9 +27,25 @@ open class CompletedTask() : RealmObject() {
 
         completedTaskText = _completedTaskText
         completedTaskDetailsText = _completedTaskDetailsText
-        dateOfCompletedTask = _dateOfCompletedTask as Date
-        completionDateOfCompletedTask = _completionDateOfCompletedTask as Date
-        notificationDateOfCompletedTask = if(_notificationDateOfCompletedTask != null) _notificationDateOfCompletedTask as Date else null
+        dateOfCompletedTask = (_dateOfCompletedTask as Timestamp).toDate()
+        completionDateOfCompletedTask = (_completionDateOfCompletedTask as Timestamp).toDate()
+        notificationDateOfCompletedTask = if(_notificationDateOfCompletedTask != null) (_notificationDateOfCompletedTask as Timestamp).toDate() else null
+        id = _id
+        listTitle = _title
+    }
+
+    constructor(_completedTaskText: String,
+                _completedTaskDetailsText: String,
+                _dateOfCompletedTask: Date?,
+                _completionDateOfCompletedTask: Date?,
+                _notificationDateOfCompletedTask: Date?,
+                _id: String?,
+                _title: String?) : this(){
+        completedTaskText = _completedTaskText
+        completedTaskDetailsText = _completedTaskDetailsText
+        dateOfCompletedTask = _dateOfCompletedTask
+        completionDateOfCompletedTask = _completionDateOfCompletedTask
+        notificationDateOfCompletedTask = _notificationDateOfCompletedTask
         id = _id
         listTitle = _title
     }

@@ -7,6 +7,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import io.realm.Realm
+import io.realm.kotlin.where
 import kotlin.collections.ArrayList
 
 class MyFirebase (context: Context, _data: MyData){
@@ -16,6 +18,7 @@ class MyFirebase (context: Context, _data: MyData){
     }
 
     val data = _data
+    lateinit var realm: Realm
     val mAuth = FirebaseAuth.getInstance()!!
     private val myDB = FirebaseFirestore.getInstance()
     private val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -33,6 +36,10 @@ class MyFirebase (context: Context, _data: MyData){
     var uIdDoc = users.document(uId)
     //
 
+    constructor(context: Context, _data: MyData, _realm: Realm) : this(context, _data){
+        realm = _realm
+    }
+
     fun changeUIdDoc(uId: String = mAuth.uid!!){
         uIdDoc = users.document(uId)
     }
@@ -41,6 +48,7 @@ class MyFirebase (context: Context, _data: MyData){
         uIdDoc.collection(data.title).document(id!!).set(map).addOnCompleteListener{
             if (it.isSuccessful){
                 Log.w(TAG,"Добавление таски в базу Firebase суксесфул")
+                changeGUID()
             }
         }
     }
@@ -51,6 +59,7 @@ class MyFirebase (context: Context, _data: MyData){
         uIdDoc.collection(data.title).document(id!!).update(map).addOnCompleteListener {
             if (it.isSuccessful){
                 Log.w(TAG,"Изменение таски в базе Firebase суксесфул")
+                changeGUID()
             }
         }
     }
@@ -60,6 +69,7 @@ class MyFirebase (context: Context, _data: MyData){
         uIdDoc.collection(data.title).document(id!!).delete().addOnCompleteListener {
             if (it.isSuccessful){
                 Log.w(TAG, "Удаление таски в базе Firebase successful")
+                changeGUID()
             }
         }
     }
@@ -68,7 +78,8 @@ class MyFirebase (context: Context, _data: MyData){
         for ((i) in (0 until completedTasks.size).withIndex()){
             uIdDoc.collection(data.title).document(completedTasks[i].id!!).delete().addOnCompleteListener {
                 if (it.isSuccessful){
-
+                    if (i == completedTasks.size-1)
+                        changeGUID()
                 }
             }
         }
@@ -84,6 +95,7 @@ class MyFirebase (context: Context, _data: MyData){
         ).addOnCompleteListener {
             if (it.isSuccessful){
                 Log.w(TAG, "Добавление таски в список завершённых successful")
+                changeGUID()
             }
         }
 
@@ -93,6 +105,7 @@ class MyFirebase (context: Context, _data: MyData){
         uIdDoc.collection(data.title).document(id!!).set(map).addOnCompleteListener {
             if(it.isSuccessful){
                 Log.w(TAG, "Добавление таски в список незавершённых successful")
+                changeGUID()
             }
         }
     }
@@ -104,7 +117,6 @@ class MyFirebase (context: Context, _data: MyData){
             .addOnCompleteListener {
                 if (it.isSuccessful) {
 
-
                 }
             }
         uIdDoc.collection(title).get().addOnCompleteListener {
@@ -112,6 +124,7 @@ class MyFirebase (context: Context, _data: MyData){
                 it.result!!.documents.forEach { doc ->
                     doc.reference.delete()
                 }
+                changeGUID()
             }
         }
     }
@@ -121,6 +134,7 @@ class MyFirebase (context: Context, _data: MyData){
             .addOnCompleteListener {
                 if (it.isSuccessful) {
                     Log.w(TAG, "MyFirebase | successful adding list")
+                    changeGUID()
                 }
                 else{
                     Log.w(TAG, "MyFirebase addTaskList ERROR -> ${it.exception}")
@@ -134,11 +148,27 @@ class MyFirebase (context: Context, _data: MyData){
         uIdDoc.collection(newListTitle).document(task.id!!).set(task.map()).addOnCompleteListener {
             if (it.isSuccessful){
                 Log.w(TAG, "moveTaskToAnotherList successful")
+                changeGUID()
             }
         }
     }
 
+    fun changeGUID() : String{
+        val newGuid = uIdDoc.collection("#$!@#$!@!@#$!@#!3123!@#").document().id
+        uIdDoc.set(mapOf(
+            "guid" to newGuid
+        ))
+        val rGuid = realm
+            .where<GUID>()
+            .findFirst()
+        if (uId == uIdDoc.id){
+            realm.executeTransaction {
+                rGuid?.guid = newGuid
+            }
+        }
 
+        return newGuid
+    }
 
 
 }

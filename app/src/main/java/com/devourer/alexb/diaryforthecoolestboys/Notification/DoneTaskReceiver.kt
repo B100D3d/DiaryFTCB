@@ -69,8 +69,8 @@ class DoneTaskReceiver : BroadcastReceiver() {
         realm.close()
 
         val doneIntent = Intent("notification")
-        doneIntent.putExtra("done",true)
         doneIntent.putExtra("id", id)
+        doneIntent.putExtra("task", completedTask)
         LocalBroadcastManager.getInstance(context.applicationContext).sendBroadcast(doneIntent)
         Log.w(TAG, "DoneTaskReceiver | onReceive | end")
 

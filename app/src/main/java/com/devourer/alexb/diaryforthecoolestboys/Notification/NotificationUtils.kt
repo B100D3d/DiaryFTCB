@@ -16,7 +16,7 @@ class NotificationUtils {
         const val TAG = "Main"
     }
 
-    lateinit var realm: Realm
+    var realm: Realm = Realm.getDefaultInstance()
     private var mNotificationId: Int = -1
     private val idList = ArrayList<Int?>()
     private var taskText: String = ""
@@ -26,8 +26,7 @@ class NotificationUtils {
         Log.w(TAG, "setNotification | CurrentTime -> ${Calendar.getInstance().timeInMillis} | nTime -> $time")
         if (time > 0){
 
-            realm = Realm.getDefaultInstance()
-            getNotificationId(task)
+            mNotificationId = task.notificationId!!
             getTaskInfo(task.id, title)
 
             val alarmManager = activity.getSystemService(Activity.ALARM_SERVICE) as AlarmManager
@@ -47,7 +46,9 @@ class NotificationUtils {
 
     }
 
-    private fun getNotificationId(task: Task){
+    fun getNotificationId() : Int{
+
+        var notificationId: Int
 
         val tasks = realm
             .where<Task>()
@@ -59,17 +60,10 @@ class NotificationUtils {
         }
 
         do {
-            mNotificationId = Random().nextInt(50000)
+            notificationId = Random().nextInt(50000)
         } while (idList.contains(mNotificationId))
 
-        task.notificationId = mNotificationId
-        val rTask = realm
-            .where<Task>()
-            .`in`("id", arrayOf(task.id))
-            .findFirst()
-        realm.executeTransaction {
-            rTask?.notificationId = mNotificationId
-        }
+        return notificationId
 
     }
 

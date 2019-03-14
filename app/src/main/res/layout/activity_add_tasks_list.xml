@@ -70,6 +70,7 @@
     <com.devourer.alexb.diaryforthecoolestboys.Snowfall.SnowfallView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:id="@+id/flakesView"
             app:snowflakesNum="60"
             app:snowflakeAlphaMin="50"
             app:snowflakeAlphaMax="200"
@@ -80,7 +81,6 @@
             app:snowflakeSpeedMax="3"
             app:snowflakesFadingEnabled="false"
             app:snowflakesAlreadyFalling="true"
-            app:snowflakeImage="@drawable/ic_daisy"
             android:layout_marginTop="0dp" app:layout_constraintTop_toTopOf="parent" android:layout_marginStart="0dp"
             app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginEnd="0dp" android:layout_marginBottom="0dp"

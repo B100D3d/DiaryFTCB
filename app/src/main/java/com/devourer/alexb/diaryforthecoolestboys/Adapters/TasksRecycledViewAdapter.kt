@@ -33,6 +33,7 @@ class TasksRecyclerViewAdapter(
     _tasks: ArrayList<Task>,
     _realm: Realm,
     _data: MyData,
+    _fire: MyFirebase,
     _snackInterface: Snacks,
     _adapterInterface: AdapterInterface
 ) : RecyclerView.Adapter<TasksRecyclerViewAdapter.ViewHolder>() {
@@ -56,21 +57,25 @@ class TasksRecyclerViewAdapter(
         mTasks = _tasks
         realm = _realm
         data = _data
-        fire = MyFirebase(mContext, data)
+        fire = _fire
         mAdapterInterface = _adapterInterface
         mSnackInterface = _snackInterface
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        //Log.w(TAG, "onCreateViewHolder start")
         val view = LayoutInflater.from(parent.context).inflate(R.layout.layout_tasklist, parent, false)
+        //Log.w(TAG, "onCreateViewHolder end")
         return ViewHolder(view)
     }
 
+
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        //Log.w(TAG, "Tasks onBindViewHolder $position")
+        //Log.w(TAG, "onBindViewHolder $position start")
         setTaskText(holder,position)
         setTasksDetailsText(holder,position)
         setNotificationDateChip(holder,position)
+        //Log.w(TAG, "onBindViewHolder $position end")
     }
 
     override fun onViewAttachedToWindow(holder: ViewHolder) {
@@ -84,6 +89,7 @@ class TasksRecyclerViewAdapter(
         holder.taskTextLayout.setOnClickListener {
             textLayoutOnClick(holder)
         }
+
     }
 
     override fun getItemCount(): Int {
@@ -145,7 +151,8 @@ class TasksRecyclerViewAdapter(
                 val taskDetailsText = if (_taskDetailsText.isNullOrBlank()) "" else _taskDetailsText
                 val date = Date()
                 val notificationDate = if (isChipChecked) _dateAndTime.time else null
-                val newTask = Task(_taskText, taskDetailsText, date, notificationDate,id,data.title)
+                val notificationId = if (notificationDate != null) NotificationUtils().getNotificationId() else null
+                val newTask = Task(_taskText, taskDetailsText, date, notificationDate, id, data.title, notificationId)
                 mTasks.add(0, newTask)
                 notifyItemInserted(0)
                 realm.executeTransaction {
@@ -184,7 +191,7 @@ class TasksRecyclerViewAdapter(
 
     }
 
-    fun moveTaskAfterNotificationDone(id: String){
+    fun deleteTaskAfterNotificationDone(id: String){
         for ((i) in (0 until mTasks.size).withIndex()){
             if (mTasks[i].id == id){
                 mTasks.removeAt(i)
@@ -198,26 +205,37 @@ class TasksRecyclerViewAdapter(
         taskEditText: String,
         taskDetailsEditText: String,
         chipAddDateText: String,
-        _notificationDate: Any?,
+        _notificationDate: Date?,
         _dateAndTime: Calendar,
         position: Int,
         snackInterface: Snacks
     ){
         val dateFormat = SimpleDateFormat("yyyy MMMM dd, h:mm a")
-        val notificationDate = if (_notificationDate != null) dateFormat.format((_notificationDate as Date).time) else mContext.resources.getText(R.string.add_date)
+        val notificationDateText = if (_notificationDate != null) dateFormat.format(_notificationDate.time) else mContext.resources.getText(R.string.add_date)
         val id = mTasks[position].id
         val date = mTasks[position].dateOfTasks
         val notificationId = mTasks[position].notificationId
         val changedNotificationDate =
-            if (chipAddDateText == notificationDate) {
+            if (chipAddDateText == notificationDateText) {
                 _notificationDate
-            } else if (chipAddDateText != notificationDate && chipAddDateText != mContext.resources.getText(R.string.add_date)) {
+            } else if (chipAddDateText != notificationDateText && chipAddDateText != mContext.resources.getText(R.string.add_date)) {
                 _dateAndTime.time
             }
             else null
-        val changedTask = Task(taskEditText, taskDetailsEditText, date, changedNotificationDate, id, data.title)
-        changedTask.notificationId = notificationId
+        val changedTask = Task(taskEditText, taskDetailsEditText, date, changedNotificationDate, id, data.title, notificationId)
         if ((taskEditText != mTasks[position].taskText || taskDetailsEditText != mTasks[position].taskDetailsText || changedNotificationDate != _notificationDate) && !taskEditText.isEmpty()) {
+            if (changedNotificationDate == _dateAndTime.time){
+                if (notificationId != null)
+                    cancelAlarm(notificationId)
+                changedTask.notificationId = NotificationUtils().getNotificationId()
+                NotificationUtils().setNotification(changedTask, data.title, _dateAndTime.timeInMillis, mActivity)
+            } else if (changedNotificationDate == null && notificationId != null){
+                cancelAlarm(notificationId)
+                changedTask.notificationId = null
+            } else if (changedNotificationDate != null && changedNotificationDate.time > Date().time && notificationId != null){
+                cancelAlarm(notificationId)
+                NotificationUtils().setNotification(changedTask, data.title, changedNotificationDate.time, mActivity)
+            }
             mTasks[position] = changedTask
             notifyItemChanged(position)
             val task = realm
@@ -225,20 +243,8 @@ class TasksRecyclerViewAdapter(
                 .`in`("id", arrayOf(id))
                 .findFirst()
             realm.executeTransaction {
-                task!!.taskText = taskEditText
-                task.taskDetailsText = taskDetailsEditText
-                task.dateOfTasks = date
-                task.notificationDateOfTask = if(changedNotificationDate != null) changedNotificationDate as Date else null
-            }
-            if (changedNotificationDate == _dateAndTime.time){
-                if (notificationId != null)
-                    cancelAlarm(notificationId)
-                NotificationUtils().setNotification(changedTask, data.title, _dateAndTime.timeInMillis, mActivity)
-            } else if (changedNotificationDate == null && notificationId != null){
-                cancelAlarm(notificationId)
-            } else if ((changedNotificationDate as Date).time > Date().time){
-                cancelAlarm(notificationId as Int)
-                NotificationUtils().setNotification(changedTask, data.title, changedNotificationDate.time, mActivity)
+                task?.deleteFromRealm()
+                it.insert(changedTask)
             }
             snackInterface.snack("Task changed", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)
             //Log.w(TAG,"ID -> ${mTasks[position].listId}")
@@ -291,6 +297,7 @@ class TasksRecyclerViewAdapter(
             null,
             task.taskDetailsText,
             task.notificationDateOfTask,
+            task.notificationId,
             task.id,
             false,
             position

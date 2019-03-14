@@ -2,16 +2,17 @@ package com.devourer.alexb.diaryforthecoolestboys.Adapters
 
 import com.devourer.alexb.diaryforthecoolestboys.CompletedTask
 import com.devourer.alexb.diaryforthecoolestboys.Task
+import java.util.*
 
 
 interface AdapterInterface {
-    fun taskNotCompleteImageViewOnClick(task: Task, completionDate: Any?, position: Int)
-    fun taskTextViewOnClick(taskText: String?, taskDetailsText: String?, notificationDate: Any?, position: Int)
+    fun taskNotCompleteImageViewOnClick(task: Task, completionDate: Date, position: Int)
+    fun taskTextViewOnClick(taskText: String?, taskDetailsText: String?, notificationDate: Date?, position: Int)
 }
 
 interface CompletedAdapterInterface{
     fun taskCompletedImageViewOnClick(completedTask: CompletedTask, task: Task, position: Int)
-    fun completedTaskTextViewOnClick(taskText: String?, taskDetailsText: String?, notificationDate: Any?, position: Int)
+    fun completedTaskTextViewOnClick(taskText: String?, taskDetailsText: String?, notificationDate: Date?, position: Int)
 }
 
 interface DeleteCompletedTaskAdapterInterface{
@@ -39,10 +40,11 @@ interface Snacks{
         actionText: String,
         actionColor: Int,
         taskText: String,
-        taskDate: Any?,
-        completionDate: Any?,
+        taskDate: Date?,
+        completionDate: Date?,
         taskDetailsText: String,
-        notificationDate: Any?,
+        notificationDate: Date?,
+        notificationId: Int?,
         taskId: String?,
         key: Boolean,
         position: Int)
@@ -56,7 +58,6 @@ interface Snacks{
         map: Map<String, Any?>,
         key: Boolean,
         id: String?,
-        notificationId: Int?,
         position: Int)
 
 

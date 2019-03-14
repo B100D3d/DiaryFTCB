@@ -4,10 +4,7 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.app.FragmentManager
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.graphics.Paint
 import android.graphics.Point
 import android.graphics.Rect
@@ -16,6 +13,7 @@ import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
+import android.preference.PreferenceManager
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -66,6 +64,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var mRealmConfiguration: RealmConfiguration
     lateinit var fire: MyFirebase
     lateinit var data: MyData
+    lateinit var sharedPreferences: SharedPreferences
     var dateAndTime = Calendar.getInstance()!!
     lateinit var snackbar: Snackbar
     private var isAdd: Boolean = true
@@ -93,8 +92,8 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(bar)
         ///////////////////
         setRefreshLayoutColor()
+        setupSharedPreferences()
         data = MyData()
-        fire = MyFirebase(this@MainActivity, data)
         mRealmConfiguration = RealmConfiguration.Builder()
             .name("DiaryFTCB.realm")
             .schemaVersion(3)
@@ -102,6 +101,7 @@ class MainActivity : AppCompatActivity() {
             .build()
         Realm.setDefaultConfiguration(mRealmConfiguration)
         realm = Realm.getDefaultInstance()
+        fire = MyFirebase(this@MainActivity, data, realm)
         getIntentsExtras()
         initRecyclerView()
         initTasksList()
@@ -166,7 +166,18 @@ class MainActivity : AppCompatActivity() {
             realm.executeTransaction {
                 task?.notificationId = null
             }
+            val map = mapOf(
+                "notificationId" to null
+            )
+            fire.changeTask(map, task?.id)
         }
+    }
+
+    private fun setupSharedPreferences() {
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        if (!sharedPreferences.getBoolean("Show flakes", false))
+            flakesView.visibility = View.GONE
+        else flakesView.setImage(sharedPreferences)
     }
 
     override fun onStart() {
@@ -177,13 +188,16 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         Log.w(TAG, "onResume")
         super.onResume()
-        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, IntentFilter("notification"))
+        checkGUID()
+        LocalBroadcastManager.getInstance(this).registerReceiver(mNotificationReceiver, IntentFilter("notification"))
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mPreferencesReciever)
     }
 
     override fun onPause() {
         Log.w(TAG, "onPause")
         super.onPause()
-        //LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver)
+        LocalBroadcastManager.getInstance(this).registerReceiver(mPreferencesReciever, IntentFilter("flakes"))
+        //LocalBroadcastManager.getInstance(this).unregisterReceiver(mNotificationReceiver)
     }
 
     override fun onDestroy() {
@@ -195,6 +209,9 @@ class MainActivity : AppCompatActivity() {
     fun signOut() {
         fire.mAuth.signOut()
         fire.mGoogleSignInClient.signOut().addOnCompleteListener(this) {
+            realm.executeTransaction {
+                it.deleteAll()
+            }
             updateUI(null)
         }
     }
@@ -340,7 +357,7 @@ class MainActivity : AppCompatActivity() {
                             .setSubtitle("")
                             .setDescription("Are you want to delete this task?")
                             .setNegativeButton("Cancel")
-                            .show(mFragmentManager,callback)
+                            .show(mFragmentManager,authCallback)
                     }
                     else -> {
                         isChange = false
@@ -491,6 +508,7 @@ class MainActivity : AppCompatActivity() {
                 }).start()
                 isAdd = true
                 isCompleted = false
+                isChange = false
             }
         }
 
@@ -527,7 +545,7 @@ class MainActivity : AppCompatActivity() {
         isAdd = false
     }
 
-    fun updateUIWhenCompletedTaskTextIsClicked(taskText: String?, taskDetailsText: String?, _notificationDate: Any?){
+    fun updateUIWhenCompletedTaskTextIsClicked(taskText: String?, taskDetailsText: String?, _notificationDate: Date?){
         //Log.w(TAG,"paintFlags -> ${taskEditText.paintFlags}")
         taskEditText.paintFlags = Paint.STRIKE_THRU_TEXT_FLAG
         //Log.w(TAG,"paintFlags! -> ${taskEditText.paintFlags}")
@@ -537,7 +555,7 @@ class MainActivity : AppCompatActivity() {
         taskEditText.setText(taskText)
         taskEditText.requestFocus()
         val dateFormat = SimpleDateFormat("yyyy MMMM dd, h:mm a")
-        val notificationDate = if (_notificationDate != null) dateFormat.format((_notificationDate as Date).time) else ""
+        val notificationDate = if (_notificationDate != null) dateFormat.format((_notificationDate).time) else ""
         if (!taskDetailsText.isNullOrBlank()){
             chipAddDetails.isChecked = true
             taskDetailsEditTextInputLayout.visibility = View.VISIBLE
@@ -634,6 +652,36 @@ class MainActivity : AppCompatActivity() {
             snacks.snack("You can't delete main list, I don't want it! ^—^", Snackbar.LENGTH_LONG, R.color.colorBackSnackbar)
     }
 
+    private fun checkGUID(){
+        if (fire.uId == fire.uIdDoc.id) {
+            fire.uIdDoc.get().addOnCompleteListener {
+                if (it.isSuccessful) {
+                    val fGuid = it.result?.get("guid")
+                    Log.w(TAG, "checkGUID | guid -> $fGuid")
+                    if (fGuid == null) {
+                        val newGuid = fire.changeGUID()
+                        if (realm.where<GUID>().findAll().isEmpty()) {
+                            realm.executeTransaction { r ->
+                                r.delete(GUID::class.java)
+                                r.insert(GUID(newGuid))
+                            }
+                        }
+                    } else {
+                        val rGuid = realm
+                            .where<GUID>()
+                            .findFirst()
+                        if (rGuid?.guid != fGuid) {
+                            onNavItemSelected(true)
+                            realm.executeTransaction {
+                                rGuid?.guid = fGuid as String
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun initTasks(){
         Log.w(TAG, "initTasks")
         val title = data.title
@@ -688,7 +736,8 @@ class MainActivity : AppCompatActivity() {
         mCompletedTasks.clear()
         mTaskLists.clear()
         realm.executeTransactionAsync {
-            it.deleteAll()
+            it.delete(Task::class.java)
+            it.delete(CompletedTask::class.java)
         }
         ////////////////////
         Log.w(TAG, "Список очищен")
@@ -730,7 +779,8 @@ class MainActivity : AppCompatActivity() {
                                         doc.get("date"),
                                         doc.get("notification_date"),
                                         doc.id,
-                                        tasksList[list]
+                                        tasksList[list],
+                                        (doc.get("notification_id") as Long?)?.toInt()
                                     )
                                     if (tasksList[list] == title)
                                         mTasks.add(task)
@@ -815,11 +865,12 @@ class MainActivity : AppCompatActivity() {
             mTasks,
             realm,
             data,
+            fire,
             snacks,
             object : AdapterInterface {
                 override fun taskNotCompleteImageViewOnClick(
                     task: Task,
-                    completionDate: Any?,
+                    completionDate: Date,
                     position: Int
                 ) {
                     completedTasksListGroupAdapter.addTask(task, completionDate) // add task to completedTasksListGroup (0 position)
@@ -833,7 +884,6 @@ class MainActivity : AppCompatActivity() {
                         task.map(),
                         false,
                         task.id,
-                        task.notificationId,
                         position
                     )
 
@@ -842,7 +892,7 @@ class MainActivity : AppCompatActivity() {
                 override fun taskTextViewOnClick(
                     taskText: String?,
                     taskDetailsText: String?,
-                    notificationDate: Any?,
+                    notificationDate: Date?,
                     position: Int
                 ) {
                     slideBarUp()
@@ -875,6 +925,7 @@ class MainActivity : AppCompatActivity() {
                     mCompletedTasks,
                     realm,
                     data,
+                    fire,
                     snacks,
                     object : CompletedAdapterInterface {
                         override fun taskCompletedImageViewOnClick(
@@ -893,7 +944,6 @@ class MainActivity : AppCompatActivity() {
                                 completedTask.map(),
                                 true,
                                 completedTask.id,
-                                null,
                                 position
                             )
                         }
@@ -901,7 +951,7 @@ class MainActivity : AppCompatActivity() {
                         override fun completedTaskTextViewOnClick(
                             taskText: String?,
                             taskDetailsText: String?,
-                            notificationDate: Any?,
+                            notificationDate: Date?,
                             position: Int
                         ) {
                             slideBarUp()
@@ -1194,19 +1244,20 @@ class MainActivity : AppCompatActivity() {
             actionText: String,
             actionColor: Int,
             taskText: String,
-            taskDate: Any?,
-            completionDate: Any?,
+            taskDate: Date?,
+            completionDate: Date?,
             taskDetailsText: String,
-            notificationDate: Any?,
+            notificationDate: Date?,
+            notificationId: Int?,
             taskId: String?,
             key: Boolean,
             position: Int
         ) {
             val task: Any =
                 if(!key)
-                    Task(taskText,taskDetailsText,taskDate,notificationDate,taskId,data.title)
+                    Task(taskText, taskDetailsText, taskDate, notificationDate, taskId, data.title, notificationId)
                 else
-                    CompletedTask(taskText,taskDetailsText,taskDate,completionDate,notificationDate,taskId, data.title)
+                    CompletedTask(taskText, taskDetailsText, taskDate, completionDate, notificationDate, taskId, data.title)
             val screenSize = Point()
             windowManager.defaultDisplay.getSize(screenSize)
             val marginSide = 0
@@ -1247,7 +1298,6 @@ class MainActivity : AppCompatActivity() {
             map: Map<String, Any?>,
             key: Boolean,
             id: String?,
-            notificationId: Int?,
             position: Int
         ) {
             val screenSize = Point()
@@ -1271,9 +1321,8 @@ class MainActivity : AppCompatActivity() {
                         completedTasksListGroupAdapter.moveTaskToNotCompleted(0) // delete task from completedTasksListGroup
                         val task = Task(map)
                         task.id = id
-                        task.notificationId = notificationId
                         task.listTitle = data.title
-                        if (notificationId != null)
+                        if (task.notificationId != null)
                             NotificationUtils().setNotification(task, data.title, task.notificationDateOfTask!!.time, this@MainActivity)
                         val movedTask = realm
                             .where<CompletedTask>()
@@ -1324,7 +1373,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    val callback = object : AuthenticationCallback {
+    val authCallback = object : AuthenticationCallback {
         override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) {
 
         }
@@ -1425,14 +1474,45 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val mReceiver = object : BroadcastReceiver() {
+    private val mNotificationReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
 
-            if (intent != null && intent.getBooleanExtra("done", false)){
+            if (intent != null) {
+                Log.w(TAG, "mNotificationReceiver | notification")
                 val id: String? = intent.getStringExtra("id")
-                if (id != null) {
-                    taskListGroupAdapter.moveTaskAfterNotificationDone(id)
+                val task: CompletedTask? = intent.getParcelableExtra("task")
+                if (id != null && task != null) {
+                    taskListGroupAdapter.deleteTaskAfterNotificationDone(id)
+                    completedTasksListGroupAdapter.addTaskAfterNotificationDone(task)
                     showCompletedBtnWhenTaskMoved()
+                }
+            }
+
+        }
+    }
+
+    private val mPreferencesReciever = object : BroadcastReceiver(){
+        override fun onReceive(context: Context?, intent: Intent?) {
+
+            if (intent != null) {
+                Log.w(TAG, "mPreferencesReciever | show_flakes")
+                val key = intent.getStringExtra("key")
+                when (key){
+                    "Show flakes" -> {
+                        if (intent.getBooleanExtra("isShow", false)) {
+                            Log.w(TAG, "Show flakes true")
+                            flakesView.setImage(sharedPreferences)
+                            flakesView.visibility = View.VISIBLE
+                            flakesView.restartFalling()
+                        } else {
+                            Log.w(TAG, "Show flakes false")
+                            flakesView.stopFalling()
+                            flakesView.visibility = View.GONE
+                        }
+                    }
+                    "Choose flakes" -> {
+                        flakesView.setImage(sharedPreferences)
+                    }
                 }
             }
         }

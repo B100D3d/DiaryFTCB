@@ -304,6 +304,7 @@
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
         <com.devourer.alexb.diaryforthecoolestboys.Snowfall.SnowfallView
+                android:id="@+id/flakesView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 app:snowflakesNum="60"
@@ -316,7 +317,6 @@
                 app:snowflakeSpeedMax="3"
                 app:snowflakesFadingEnabled="false"
                 app:snowflakesAlreadyFalling="false"
-                app:snowflakeImage="@drawable/ic_daisy"
         />
     </FrameLayout>
     <com.google.android.material.bottomappbar.BottomAppBar

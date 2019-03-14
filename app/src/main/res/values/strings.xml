@@ -13,8 +13,20 @@
     <string name="cancel">CANCEL</string>
     <string name="fingerprint_authentication_icon_content_description">Fingerprint authentication</string>
     <string name="fingerprint_not_recognised">Not recognised.</string>
-    <string name="show_statistick">Show statistick</string>
+    <string name="show_statistick">Show statistick (Buy it for only 99$)</string>
     <string name="create_new_list">Create new list</string>
+    <string name="title_activity_settings">Settings</string>
+
+    <!-- Preference Titles -->
+    <string name="general_header">General</string>
+    <string name="flakes_header">Flakes</string>
+
+    <!-- General Preferences -->
+    <string name="signature_title">Your signature</string>
+
+    <!-- Flakes Preferences -->
+    <string name="show_flakes_title">Show flakes</string>
+    <string name="choose_flakes_title">Flakes type</string>
 
 
 </resources>

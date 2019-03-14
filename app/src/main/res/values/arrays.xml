@@ -1,0 +1,15 @@
+<resources>
+    <string-array name="flakes_entries">
+        <item>Season (future)</item>
+        <item>Snowflakes</item>
+        <item>Flowers</item>
+        <item>Penises</item>
+    </string-array>
+
+    <string-array name="flakes_values">
+        <item>season</item>
+        <item>snowflakes</item>
+        <item>flowers</item>
+        <item>penis</item>
+    </string-array>
+</resources>

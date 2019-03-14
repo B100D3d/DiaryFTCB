@@ -2,6 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
+            android:id="@+id/settings"
             android:title="Settings"
             android:checkable="false"/>
     <item
@@ -15,14 +16,13 @@
     <group>
         <item android:title="About app">
             <menu>
-                <item
-                        android:title="Click"
-                        android:id="@+id/click"
-                />
+                <group android:id="@+id/about_group" android:orderInCategory="0">
+                    <item
+                            android:id="@+id/about"
+                            android:title="About app"
+                    />
+                </group>
             </menu>
         </item>
-    </group>
-    <group>
-        <item android:title="And something more"/>
     </group>
 </menu>

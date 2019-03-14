@@ -17,6 +17,15 @@
             android:theme="@style/MainAppTheme"
             tools:ignore="GoogleAppIndexingWarning">
         <activity
+                android:name=".SettingsActivity"
+                android:label="@string/title_activity_settings"
+                android:theme="@style/MainAppTheme"
+                android:parentActivityName=".MainActivity">
+            <meta-data
+                    android:name="android.support.PARENT_ACTIVITY"
+                    android:value="com.devourer.alexb.diaryforthecoolestboys.MainActivity"/>
+        </activity>
+        <activity
                 android:name=".SplashActivity"
                 android:screenOrientation="portrait"
                 android:theme="@style/SplashTheme">
@@ -29,15 +38,12 @@
         <activity
                 android:name=".LoginActivity"
                 android:screenOrientation="portrait"
-                android:theme="@style/LoginAppTheme"
-        >
+                android:theme="@style/LoginAppTheme">
         </activity>
         <activity
                 android:name=".MainActivity"
                 android:screenOrientation="portrait"
-                android:theme="@style/MainAppTheme"
-
-        >
+                android:theme="@style/MainAppTheme">
         </activity>
         <activity
                 android:name=".AddTasksListActivity"
@@ -45,8 +51,12 @@
                 android:theme="@style/AddTaskListAppTheme">
         </activity>
 
-        <receiver android:name=".Notification.NotificationReceiver" android:enabled="true"/>
-        <receiver android:name=".Notification.DoneTaskReceiver" android:enabled="true"/>
+        <receiver
+                android:name=".Notification.NotificationReceiver"
+                android:enabled="true"/>
+        <receiver
+                android:name=".Notification.DoneTaskReceiver"
+                android:enabled="true"/>
     </application>
 
 </manifest>

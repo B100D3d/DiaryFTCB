@@ -231,12 +231,7 @@ public class FingerprintDialogBuilder {
                 .setDescription(mDescription)
                 .setNegativeButton(mButtonTitle,
                         mContext.getMainExecutor(),
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(final DialogInterface dialogInterface, final int i) {
-                                authenticationCallback.authenticationCanceledByUser();
-                            }
-                        })
+                        (dialogInterface, i) -> authenticationCallback.authenticationCanceledByUser())
                 .build()
                 .authenticate(new CancellationSignal(),
                         mContext.getMainExecutor(),

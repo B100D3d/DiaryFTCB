@@ -1,9 +1,6 @@
 package com.devourer.alexb.diaryforthecoolestboys.Snowfall
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
+import android.graphics.*
 import android.util.Log
 import java.lang.Math.*
 import java.util.*
@@ -36,7 +33,11 @@ internal class Snowflake(val params: Params) {
         shouldRecycleFalling = true
         size = randomizer.randomInt(params.sizeMinInPx, params.sizeMaxInPx, gaussian = true)
         if (params.image != null) {
-            bitmap = Bitmap.createScaledBitmap(params.image, size, size, false)
+            val matrix = Matrix()
+            matrix.postRotate(randomizer.randomInt(90).toFloat())
+            val scaledBitmap = Bitmap.createScaledBitmap(params.image, size, size, false)
+            bitmap = Bitmap.createBitmap(scaledBitmap, 0, 0, scaledBitmap.width, scaledBitmap.height, matrix, true)
+            //bitmap = Bitmap.createScaledBitmap(params.image, size, size, false)
         }
 
         val speed = ((size - params.sizeMinInPx).toFloat() / (params.sizeMaxInPx - params.sizeMinInPx) *
@@ -83,7 +84,7 @@ internal class Snowflake(val params: Params) {
                 }
             } else {
                 positionY = params.parentHeight + size.toDouble()
-                stopped = true;
+                stopped = true
             }
         }
         if (params.fadingEnabled) {

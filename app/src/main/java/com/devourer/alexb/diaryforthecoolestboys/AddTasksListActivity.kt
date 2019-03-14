@@ -6,6 +6,7 @@ import android.graphics.Point
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
+import android.preference.PreferenceManager
 import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -40,7 +41,12 @@ class AddTasksListActivity : AppCompatActivity() {
         data = intent.getParcelableExtra(INTENT_ADD_LIST_ID)
         fire = MyFirebase(this,data)
         realm = Realm.getDefaultInstance()
-        Log.w(TAG, "AddTasksListActivity Realm.getDefaultInstance()")
+
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        if (!sharedPreferences.getBoolean("Show flakes", false))
+            flakesView.visibility = View.GONE
+        else
+            flakesView.setImage(sharedPreferences)
 
         val lists = realm
             .where<TaskList>()

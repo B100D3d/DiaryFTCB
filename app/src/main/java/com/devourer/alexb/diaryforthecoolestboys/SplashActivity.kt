@@ -29,6 +29,7 @@ class SplashActivity : AppCompatActivity() {
                 if (intent.getBooleanExtra("notification", false)){
                     mainIntent.putExtra("notification", intent.getBooleanExtra("notification", false))
                     mainIntent.putExtra("title", intent.getStringExtra("title"))
+                    mainIntent.putExtra("id", intent.getIntExtra("id", -1))
                 }
                 startActivity(mainIntent)
                 finish()

@@ -38,7 +38,7 @@ public interface AuthenticationCallback {
     void fingerprintAuthenticationNotSupported();
 
     /**
-     * This callback will notify the application whenever user has not registered any fingerprint
+     * This authCallback will notify the application whenever user has not registered any fingerprint
      * into the phone settings.
      * <p>
      * In  above cases the library won't display any fingerprint dialog and won't perform any authentication.
@@ -53,7 +53,7 @@ public interface AuthenticationCallback {
     /**
      * Called when an unrecoverable error has been encountered and the operation is complete.
      * No further callbacks will be made on this object. The library will stop scanning for the
-     * fingerprint after this callback.
+     * fingerprint after this authCallback.
      *
      * @param errorCode A {@link ErrorCodes} identifying the error message.
      * @param errString A human-readable string that can be shown in UI
@@ -65,7 +65,7 @@ public interface AuthenticationCallback {
      * Called when a recoverable error has been encountered during authentication. The help
      * string is provided to give the user guidance for what went wrong, such as
      * "Sensor dirty, please clean it." The library will continue to scan for the fingerprint after
-     * this callback.
+     * this authCallback.
      *
      * @param helpCode   A {@link HelperCodes} identifying the error message.
      * @param helpString A human-readable string that can be shown in UI
@@ -74,20 +74,20 @@ public interface AuthenticationCallback {
     void onAuthenticationHelp(@HelperCodes final int helpCode, @Nullable final CharSequence helpString);
 
     /**
-     * This callback will be called whenever the user cancels the fingerprint authentication by
+     * This authCallback will be called whenever the user cancels the fingerprint authentication by
      * clicking the negative/cancel button on the dialog.
      */
     void authenticationCanceledByUser();
 
     /**
-     * This callback indicates that the fingerprint authentication is successful. The library will
-     * stop scanning for the fingerprint after this callback and dismiss the dialog.
+     * This authCallback indicates that the fingerprint authentication is successful. The library will
+     * stop scanning for the fingerprint after this authCallback and dismiss the dialog.
      */
     void onAuthenticationSucceeded();
 
     /**
-     * This callback indicates that the scanned finger does not match with the enrolled finger. The
-     * library will continue to scan for the fingerprint after this callback.
+     * This authCallback indicates that the scanned finger does not match with the enrolled finger. The
+     * library will continue to scan for the fingerprint after this authCallback.
      */
     void onAuthenticationFailed();
 }

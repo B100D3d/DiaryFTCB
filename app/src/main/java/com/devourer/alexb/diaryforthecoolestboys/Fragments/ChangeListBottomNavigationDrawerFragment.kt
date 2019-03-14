@@ -1,8 +1,8 @@
 package com.devourer.alexb.diaryforthecoolestboys.Fragments
 
-import android.app.Dialog
-import android.app.NotificationManager
+import android.app.*
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MenuItem
@@ -12,6 +12,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import androidx.core.content.res.ResourcesCompat
 import com.devourer.alexb.diaryforthecoolestboys.*
+import com.devourer.alexb.diaryforthecoolestboys.Notification.NotificationReceiver
 import com.devourer.alexb.diaryforthecoolestboys.Notification.NotificationUtils
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -92,16 +93,18 @@ class ChangeListBottomNavigationDrawerFragment : BottomSheetDialogFragment() {
         mainActivity.realm.executeTransaction {
             task?.listTitle = title.toString()
         }
-        if (task?.notificationId != null && (task.notificationDateOfTask as Date).time > Date().time)
+        if (task?.notificationId != null && task.notificationDateOfTask != null && (task.notificationDateOfTask as Date).time > Date().time)
             changeNotification(mainActivity, task)
         mainActivity.updateBarUI(false)
         mainActivity.snacks.snack("Moved to \"$title\"",Snackbar.LENGTH_SHORT,R.color.colorBackSnackbar)
     }
 
     private fun changeNotification(mainActivity: MainActivity, task: Task){
-        val nm = mainActivity.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.cancel(task.notificationId as Int)
-        NotificationUtils().setNotification(task, mainActivity.data.title, task.notificationDateOfTask!!.time, mainActivity)
+        val alarmManager = mainActivity.getSystemService(Activity.ALARM_SERVICE) as AlarmManager
+        val alarmIntent = Intent(mainActivity.applicationContext, NotificationReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(mainActivity, task.notificationId!!, alarmIntent, PendingIntent.FLAG_CANCEL_CURRENT)
+        alarmManager.cancel(pendingIntent)
+        NotificationUtils().setNotification(task, task.listTitle!!, task.notificationDateOfTask!!.time, mainActivity)
     }
 
     private fun disableNavigationViewScrollbars(navigationView: NavigationView?) {

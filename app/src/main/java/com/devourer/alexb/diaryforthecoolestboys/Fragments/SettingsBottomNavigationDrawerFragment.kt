@@ -2,6 +2,7 @@ package com.devourer.alexb.diaryforthecoolestboys.Fragments
 
 import android.app.Dialog
 import android.content.DialogInterface
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -9,11 +10,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.core.content.res.ResourcesCompat
+import com.devourer.alexb.diaryforthecoolestboys.*
 import com.devourer.alexb.diaryforthecoolestboys.FingerprintLibrary.FingerprintDialogBuilder
-import com.devourer.alexb.diaryforthecoolestboys.MainActivity
-import com.devourer.alexb.diaryforthecoolestboys.MyData
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.devourer.alexb.diaryforthecoolestboys.R
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.android.synthetic.main.settings_bottomsheet.*
@@ -24,6 +23,7 @@ class SettingsBottomNavigationDrawerFragment: BottomSheetDialogFragment() {
 
     companion object {
         private const val TAG = "Main"
+        private const val CLICK_BTN = 13
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -38,51 +38,17 @@ class SettingsBottomNavigationDrawerFragment: BottomSheetDialogFragment() {
 
         settings_navigation_view_layout.clipToOutline = true
 
+        if (fire.uId == "Cxje6ZRvCaeunxDHJwRjMWMudFe2" || fire.uId == "YdruDXWPkwYWc3fcrLsDy01WgEF2") addClickBtn()
+
         settings_navigation_view.setNavigationItemSelectedListener { menuItem ->
             when(menuItem.itemId){
-                R.id.delete_list -> {
-                    mainActivity.isDeleteTaskOrList = true
-                    FingerprintDialogBuilder(mainActivity)
-                        .setTitle("Delete")
-                        .setSubtitle("")
-                        .setDescription("Are you want to delete this list?")
-                        .setNegativeButton("Cancel")
-                        .show(mainActivity.mFragmentManager,mainActivity.callback)
-                    dismiss()
-                }
-                R.id.delete_completed_tasks -> {
-                    FingerprintDialogBuilder(mainActivity)
-                        .setTitle("Delete")
-                        .setSubtitle("")
-                        .setDescription("Are you want to delete all completed tasks?")
-                        .setNegativeButton("Cancel")
-                        .show(mainActivity.mFragmentManager,mainActivity.deleteTasksCallback)
-                    dismiss()
+                R.id.settings -> { startSettingsActivity(mainActivity) }
+                R.id.about -> {
 
                 }
-                R.id.click -> {
-                    Log.w(TAG, "clickNum -> ${data.clickNum}")
-                    when (data.clickNum){
-                        0 -> {
-                            fire.changeUIdDoc()
-                            data.clickNum = 1
-                            mainActivity.onNavItemSelected(true)
-                            dismiss()
-                        }
-                        in 1..9 -> {
-                            data.clickNum++
-                        }
-                        10 -> {
-                            if (fire.uId == "Cxje6ZRvCaeunxDHJwRjMWMudFe2")
-                                fire.changeUIdDoc("YdruDXWPkwYWc3fcrLsDy01WgEF2")
-                            else
-                                fire.changeUIdDoc("Cxje6ZRvCaeunxDHJwRjMWMudFe2")
-                            data.clickNum = 0
-                            mainActivity.onNavItemSelected(true)
-                            dismiss()
-                        }
-                    }
-                }
+                R.id.delete_list -> { deleteList(mainActivity) }
+                R.id.delete_completed_tasks -> { deleteAllCompletedTasks(mainActivity) }
+                CLICK_BTN -> { ourThing(data, fire, mainActivity) }
             }
             true
         }
@@ -123,6 +89,62 @@ class SettingsBottomNavigationDrawerFragment: BottomSheetDialogFragment() {
         super.onDismiss(dialog)
         if (data.clickNum != 0){
             data.clickNum = 1
+        }
+    }
+
+    private fun startSettingsActivity(mainActivity: MainActivity){
+        val intent = Intent(mainActivity, SettingsActivity::class.java)
+        startActivity(intent)
+        dismiss()
+    }
+
+    private fun addClickBtn(){
+        val menu = settings_navigation_view.menu
+        menu.add(R.id.about_group, CLICK_BTN, 0, "Click")
+    }
+
+    private fun deleteList(mainActivity: MainActivity){
+        mainActivity.isDeleteTaskOrList = true
+        FingerprintDialogBuilder(mainActivity)
+            .setTitle("Delete")
+            .setSubtitle("")
+            .setDescription("Are you want to delete this list?")
+            .setNegativeButton("Cancel")
+            .show(mainActivity.mFragmentManager,mainActivity.authCallback)
+        dismiss()
+    }
+
+    private fun deleteAllCompletedTasks(mainActivity: MainActivity){
+        FingerprintDialogBuilder(mainActivity)
+            .setTitle("Delete")
+            .setSubtitle("")
+            .setDescription("Are you want to delete all completed tasks?")
+            .setNegativeButton("Cancel")
+            .show(mainActivity.mFragmentManager,mainActivity.deleteTasksCallback)
+        dismiss()
+    }
+
+    private fun ourThing(data: MyData, fire: MyFirebase, mainActivity: MainActivity){
+        Log.w(TAG, "clickNum -> ${data.clickNum}")
+        when (data.clickNum){
+            0 -> {
+                fire.changeUIdDoc()
+                data.clickNum = 1
+                mainActivity.onNavItemSelected(true)
+                dismiss()
+            }
+            in 1..9 -> {
+                data.clickNum++
+            }
+            10 -> {
+                if (fire.uId == "Cxje6ZRvCaeunxDHJwRjMWMudFe2")
+                    fire.changeUIdDoc("YdruDXWPkwYWc3fcrLsDy01WgEF2")
+                else if (fire.uId == "YdruDXWPkwYWc3fcrLsDy01WgEF2")
+                    fire.changeUIdDoc("Cxje6ZRvCaeunxDHJwRjMWMudFe2")
+                data.clickNum = 0
+                mainActivity.onNavItemSelected(true)
+                dismiss()
+            }
         }
     }
 }

@@ -25,6 +25,7 @@ class CompletedTasksRecyclerViewAdapter(
     _completedTasks: ArrayList<CompletedTask>,
     _realm: Realm,
     _data: MyData,
+    _fire: MyFirebase,
     _snackInterface: Snacks,
     _completedAdapterInterface: CompletedAdapterInterface
 ) : RecyclerView.Adapter<CompletedTasksRecyclerViewAdapter.ViewHolder>() {
@@ -34,7 +35,7 @@ class CompletedTasksRecyclerViewAdapter(
     }
     private var isExpanded = false
     private var mCompletedTasks = ArrayList<CompletedTask>()
-    private var fire: MyFirebase = MyFirebase(mContext,_data)
+    private var fire: MyFirebase
     private var data: MyData
     var realm: Realm
     var mSnackInterface: Snacks
@@ -46,6 +47,7 @@ class CompletedTasksRecyclerViewAdapter(
         mSnackInterface = _snackInterface
         realm = _realm
         data = _data
+        fire = _fire
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -124,8 +126,8 @@ class CompletedTasksRecyclerViewAdapter(
         isExpanded = !isExpanded
     }
 
-    fun addTask(task: Task, completionDate: Any?){
-        val completedTask = CompletedTask(task, completionDate as Date)
+    fun addTask(task: Task, completionDate: Date){
+        val completedTask = CompletedTask(task, completionDate)
         mCompletedTasks.add(0, completedTask)
         notifyItemInserted(0)
     }
@@ -144,6 +146,11 @@ class CompletedTasksRecyclerViewAdapter(
         mCompletedTasks.removeAt(position)
         notifyItemRemoved(position)
 
+    }
+
+    fun addTaskAfterNotificationDone(completedTask: CompletedTask){
+        mCompletedTasks.add(0, completedTask)
+        notifyItemInserted(0)
     }
 
     private fun addTaskToNotCompleted(task: Task, position: Int){
@@ -186,6 +193,7 @@ class CompletedTasksRecyclerViewAdapter(
             completedTask.completionDateOfCompletedTask,
             completedTask.completedTaskDetailsText,
             completedTask.notificationDateOfCompletedTask,
+            null,
             completedTask.id,
             true,
             position
