@@ -72,7 +72,12 @@ class BottomNavigationDrawerFragment : BottomSheetDialogFragment() {
         logoutBtn.setOnClickListener { mainActivity.signOut() }
         createNewListBtn.setOnClickListener {
             dismiss()
-            mainActivity.createNewTasksList() }
+            mainActivity.createNewTasksList()
+        }
+        showStatisticsBtn.setOnClickListener {
+            dismiss()
+            mainActivity.showStatistics()
+        }
 
 
         disableNavigationViewScrollbars(navigation_view)

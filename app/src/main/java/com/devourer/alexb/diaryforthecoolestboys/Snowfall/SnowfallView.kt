@@ -141,6 +141,7 @@ class SnowfallView(context: Context, attrs: AttributeSet) : View(context, attrs)
             }
             "snowflakes" -> {
                 snowflakeImages.add(context.getDrawable(R.drawable.flakes_snowflake_0)!!.toBitmap())
+                setCount(120)
                 setMinAndMaxSize(8, 16)
             }
             "penis" -> {
@@ -148,7 +149,21 @@ class SnowfallView(context: Context, attrs: AttributeSet) : View(context, attrs)
                 snowflakeImages.add(context.getDrawable(R.drawable.flakes_penis_1)!!.toBitmap())
                 setCount(40)
                 setMinAndMaxAlpha(200, 200)
-                setMinAndMaxSize(18, 22)
+                setMinAndMaxSize(24, 28)
+            }
+            "geek" -> {
+                snowflakeImages.add(context.getDrawable(R.drawable.flakes_geek_0)!!.toBitmap())
+                snowflakeImages.add(context.getDrawable(R.drawable.flakes_geek_1)!!.toBitmap())
+                snowflakeImages.add(context.getDrawable(R.drawable.flakes_geek_4)!!.toBitmap())
+                setCount(40)
+                setMinAndMaxAlpha(250, 250)
+                setMinAndMaxSize(24, 28)
+            }
+            "batarangs" -> {
+                snowflakeImages.add(context.getDrawable(R.drawable.flakes_batarang_0)!!.toBitmap())
+                setCount(60)
+                setMinAndMaxAlpha(250, 250)
+                setMinAndMaxSize(30, 34)
             }
         }
         snowflakes = createSnowflakes()

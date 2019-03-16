@@ -1,6 +1,7 @@
 package com.devourer.alexb.diaryforthecoolestboys
 
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -23,6 +24,7 @@ import java.util.concurrent.TimeUnit
 
 class LoginActivity : AppCompatActivity() {
 
+    private lateinit var sharedPreferences: SharedPreferences
     private val handler = Handler()
     private lateinit var mAuth: FirebaseAuth
     private lateinit var mGoogleSignInClient: GoogleSignInClient
@@ -37,12 +39,7 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
-
-        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
-        if (!sharedPreferences.getBoolean("Show flakes", false))
-            flakesView.visibility = View.GONE
-        else
-            flakesView.setImage(sharedPreferences)
+        setupSharedPreferences()
 
         mAuth = FirebaseAuth.getInstance()
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -122,6 +119,13 @@ class LoginActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
+    }
+
+    private fun setupSharedPreferences() {
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        if (!sharedPreferences.getBoolean("Show flakes", false))
+            flakesView.visibility = View.GONE
+        else flakesView.setImage(sharedPreferences)
     }
 
 

@@ -105,22 +105,31 @@ class SettingsBottomNavigationDrawerFragment: BottomSheetDialogFragment() {
 
     private fun deleteList(mainActivity: MainActivity){
         mainActivity.isDeleteTaskOrList = true
-        FingerprintDialogBuilder(mainActivity)
-            .setTitle("Delete")
-            .setSubtitle("")
-            .setDescription("Are you want to delete this list?")
-            .setNegativeButton("Cancel")
-            .show(mainActivity.mFragmentManager,mainActivity.authCallback)
+        if (mainActivity.sharedPreferences.getBoolean("fingerprint", false)) {
+            FingerprintDialogBuilder(mainActivity)
+                .setTitle("Delete")
+                .setSubtitle("")
+                .setDescription("Are you want to delete this list?")
+                .setNegativeButton("Cancel")
+                .show(mainActivity.mFragmentManager, mainActivity.authCallback)
+        } else
+            mainActivity.deleteTaskList()
         dismiss()
     }
 
     private fun deleteAllCompletedTasks(mainActivity: MainActivity){
-        FingerprintDialogBuilder(mainActivity)
-            .setTitle("Delete")
-            .setSubtitle("")
-            .setDescription("Are you want to delete all completed tasks?")
-            .setNegativeButton("Cancel")
-            .show(mainActivity.mFragmentManager,mainActivity.deleteTasksCallback)
+        if (mainActivity.sharedPreferences.getBoolean("fingerprint", false)) {
+            FingerprintDialogBuilder(mainActivity)
+                .setTitle("Delete")
+                .setSubtitle("")
+                .setDescription("Are you want to delete all completed tasks?")
+                .setNegativeButton("Cancel")
+                .show(mainActivity.mFragmentManager, mainActivity.deleteTasksCallback)
+        }
+        else{
+            mainActivity.completedTasksListGroupAdapter.deleteAllCompletedTasks()
+            mainActivity.showCompletedBtnWhenTaskMoved()
+        }
         dismiss()
     }
 

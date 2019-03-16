@@ -20,10 +20,10 @@
     <PreferenceCategory
             app:title="@string/general_header">
 
-        <EditTextPreference
-                app:key="signature"
-                app:title="@string/signature_title"
-                app:useSimpleSummaryProvider="true"/>
+        <SwitchPreferenceCompat
+                app:key="fingerprint"
+                app:title="@string/fingerprint_title"
+        />
 
     </PreferenceCategory>
 

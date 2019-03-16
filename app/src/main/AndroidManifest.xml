@@ -17,10 +17,17 @@
             android:theme="@style/MainAppTheme"
             tools:ignore="GoogleAppIndexingWarning">
         <activity
+                android:name=".StatisticsActivity"
+                android:theme="@style/StatisticsAppTheme"
+                android:screenOrientation="portrait"
+        >
+        </activity>
+        <activity
                 android:name=".SettingsActivity"
                 android:label="@string/title_activity_settings"
-                android:theme="@style/MainAppTheme"
-                android:parentActivityName=".MainActivity">
+                android:screenOrientation="portrait"
+                android:parentActivityName=".MainActivity"
+                android:theme="@style/MainAppTheme">
             <meta-data
                     android:name="android.support.PARENT_ACTIVITY"
                     android:value="com.devourer.alexb.diaryforthecoolestboys.MainActivity"/>

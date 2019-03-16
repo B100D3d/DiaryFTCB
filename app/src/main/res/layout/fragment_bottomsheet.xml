@@ -164,6 +164,7 @@
 
             </View>
             <com.google.android.material.button.MaterialButton
+                    android:id="@+id/showStatisticsBtn"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/google_sans_regular"
@@ -171,7 +172,7 @@
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:background="@color/colorBottomAppBar"
                     android:textColor="@color/colorItemText"
-                    android:text="@string/show_statistick"
+                    android:text="@string/show_statistics"
                     android:textAllCaps="false" android:textAlignment="textStart"
                     app:iconTint="@color/colorAccent"
                     android:paddingBottom="15dp"

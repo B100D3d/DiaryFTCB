@@ -83,6 +83,7 @@ class MainActivity : AppCompatActivity() {
         private const val TAG: String = "Main"
         const val INTENT_ID = "auth"
         const val INTENT_ADD_LIST_ID = "add_list"
+        const val INTENT_STATISTICS_ID = "lists"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -350,7 +351,7 @@ class MainActivity : AppCompatActivity() {
             R.id.delete -> {
                 isChange = false
                 when {
-                    Build.VERSION.SDK_INT >= 23 -> {
+                    Build.VERSION.SDK_INT >= 23 && sharedPreferences.getBoolean("fingerprint", false) -> {
                         isDeleteTaskOrList = false
                         FingerprintDialogBuilder(this)
                             .setTitle("Delete")
@@ -618,6 +619,12 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
+    fun showStatistics(){
+        val intent = Intent(this, StatisticsActivity::class.java)
+        intent.putExtra(INTENT_STATISTICS_ID, R.id.my_tasks_list)
+        startActivity(intent)
+    }
+
     fun deleteTaskList(){
         if (data.title != "My Tasks") {
             val title = data.title
@@ -735,9 +742,10 @@ class MainActivity : AppCompatActivity() {
         mTasks.clear()
         mCompletedTasks.clear()
         mTaskLists.clear()
-        realm.executeTransactionAsync {
+        realm.executeTransaction {
             it.delete(Task::class.java)
             it.delete(CompletedTask::class.java)
+            it.delete(TaskList::class.java)
         }
         ////////////////////
         Log.w(TAG, "Список очищен")

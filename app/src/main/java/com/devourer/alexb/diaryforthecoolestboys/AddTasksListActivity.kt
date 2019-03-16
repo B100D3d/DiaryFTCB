@@ -2,6 +2,7 @@ package com.devourer.alexb.diaryforthecoolestboys
 
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Point
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeUnit
 class AddTasksListActivity : AppCompatActivity() {
 
     private lateinit var fire: MyFirebase
+    private lateinit var sharedPreferences: SharedPreferences
     private val handler = Handler()
     private val listsId = ArrayList<Long>()
     lateinit var realm: Realm
@@ -38,15 +40,10 @@ class AddTasksListActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         Log.w(TAG, "AddTasksListActivity onCreate")
         setContentView(R.layout.activity_add_tasks_list)
+        setupSharedPreferences()
         data = intent.getParcelableExtra(INTENT_ADD_LIST_ID)
         fire = MyFirebase(this,data)
         realm = Realm.getDefaultInstance()
-
-        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
-        if (!sharedPreferences.getBoolean("Show flakes", false))
-            flakesView.visibility = View.GONE
-        else
-            flakesView.setImage(sharedPreferences)
 
         val lists = realm
             .where<TaskList>()
@@ -163,5 +160,13 @@ class AddTasksListActivity : AppCompatActivity() {
         startActivity(intent)
         finish()
 
+    }
+
+
+    private fun setupSharedPreferences() {
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        if (!sharedPreferences.getBoolean("Show flakes", false))
+            flakesView.visibility = View.GONE
+        else flakesView.setImage(sharedPreferences)
     }
 }
