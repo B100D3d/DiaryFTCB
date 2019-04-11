@@ -172,11 +172,11 @@
                           <map>
                             <entry key="assetSourceType" value="FILE" />
                             <entry key="color" value="ffffff" />
-                            <entry key="height" value="42" />
-                            <entry key="outputName" value="flakes_geek_1" />
+                            <entry key="height" value="512" />
+                            <entry key="outputName" value="ic_google" />
                             <entry key="overrideSize" value="true" />
-                            <entry key="sourceFile" value="C:\Users\alexb\YandexDisk\ИзображенияYD\DiaryProject\geek\deadpool.svg" />
-                            <entry key="width" value="42" />
+                            <entry key="sourceFile" value="C:\Users\alexb\YandexDisk\ИзображенияYD\DiaryProject\google.svg" />
+                            <entry key="width" value="512" />
                           </map>
                         </option>
                       </PersistentState>

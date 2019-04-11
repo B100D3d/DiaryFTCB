@@ -138,17 +138,20 @@ class SnowfallView(context: Context, attrs: AttributeSet) : View(context, attrs)
                 snowflakeImages.add(context.getDrawable(R.drawable.flakes_flower_0)!!.toBitmap())
                 snowflakeImages.add(context.getDrawable(R.drawable.flakes_flower_1)!!.toBitmap())
                 setMinAndMaxSize(8, 16)
+                setMinAndMaxAlpha(150, 255)
+                setCount(60)
             }
             "snowflakes" -> {
                 snowflakeImages.add(context.getDrawable(R.drawable.flakes_snowflake_0)!!.toBitmap())
                 setCount(120)
                 setMinAndMaxSize(8, 16)
+                setMinAndMaxAlpha(150, 255)
             }
             "penis" -> {
                 snowflakeImages.add(context.getDrawable(R.drawable.flakes_penis_0)!!.toBitmap())
                 snowflakeImages.add(context.getDrawable(R.drawable.flakes_penis_1)!!.toBitmap())
                 setCount(40)
-                setMinAndMaxAlpha(200, 200)
+                setMinAndMaxAlpha(255, 255)
                 setMinAndMaxSize(24, 28)
             }
             "geek" -> {
@@ -156,22 +159,26 @@ class SnowfallView(context: Context, attrs: AttributeSet) : View(context, attrs)
                 snowflakeImages.add(context.getDrawable(R.drawable.flakes_geek_1)!!.toBitmap())
                 snowflakeImages.add(context.getDrawable(R.drawable.flakes_geek_4)!!.toBitmap())
                 setCount(40)
-                setMinAndMaxAlpha(250, 250)
+                setMinAndMaxAlpha(255, 255)
                 setMinAndMaxSize(24, 28)
             }
             "batarangs" -> {
                 snowflakeImages.add(context.getDrawable(R.drawable.flakes_batarang_0)!!.toBitmap())
-                setCount(60)
-                setMinAndMaxAlpha(250, 250)
+                setCount(40)
+                setMinAndMaxAlpha(255, 255)
                 setMinAndMaxSize(30, 34)
             }
         }
         snowflakes = createSnowflakes()
     }
 
-    private fun getRandBitmap() : Bitmap {
-        val rand = Random().nextInt(snowflakeImages.size)
-        return snowflakeImages[rand]
+    private fun getRandBitmap() : Bitmap? {
+        return if (snowflakeImages.size == 0)
+            null
+        else{
+            val rand = Random().nextInt(snowflakeImages.size)
+            snowflakeImages[rand]
+        }
     }
 
     private fun getRandParams() : Snowflake.Params {

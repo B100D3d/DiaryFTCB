@@ -34,7 +34,7 @@ internal class Snowflake(val params: Params) {
         size = randomizer.randomInt(params.sizeMinInPx, params.sizeMaxInPx, gaussian = true)
         if (params.image != null) {
             val matrix = Matrix()
-            matrix.postRotate(randomizer.randomInt(90).toFloat())
+            matrix.postRotate(randomizer.randomInt(360).toFloat())
             val scaledBitmap = Bitmap.createScaledBitmap(params.image, size, size, false)
             bitmap = Bitmap.createBitmap(scaledBitmap, 0, 0, scaledBitmap.width, scaledBitmap.height, matrix, true)
             //bitmap = Bitmap.createScaledBitmap(params.image, size, size, false)
@@ -43,19 +43,18 @@ internal class Snowflake(val params: Params) {
         val speed = ((size - params.sizeMinInPx).toFloat() / (params.sizeMaxInPx - params.sizeMinInPx) *
                 (params.speedMax - params.speedMin) + params.speedMin)
         //Log.w("Main", "speed -> $speed")
-        val angle = toRadians(randomizer.randomDouble(params.angleMax) * randomizer.randomSignum())
-        //Log.w("Main", "angle -> $angle")
-        speedX = if (Random().nextInt(8) != 1) {
-            speed * cos(angle) / 4
-        } else
-            speed * sin(angle)
+        val angleY = toRadians(randomizer.randomDouble(params.angleMax) * randomizer.randomSignum())
+        val angleX = toRadians(randomizer.randomDouble(params.angleMax+20) + 10)
+        //Log.w("Main", "angle -> $angleX")
+        //speedX = speed * sin(abs(angle*randomizer.randomInt(3,5)))
+        speedX = speed * sin(angleX)
         //Log.w("Main", "speedX -> $speedX")
-        speedY = speed * cos(angle)
+        speedY = speed * cos(angleY)
 
         alpha = randomizer.randomInt(params.alphaMin, params.alphaMax)
         paint.alpha = alpha
 
-        positionX = randomizer.randomDouble(params.parentWidth)
+        positionX = randomizer.randomDouble(params.parentWidth) - params.parentWidth/2
         if (positionY != null) {
             this.positionY = positionY
         } else {
@@ -72,7 +71,9 @@ internal class Snowflake(val params: Params) {
 
     fun update() {
 
+        //Log.w("Main", "old positionX -> $positionX")
         positionX += speedX
+        //Log.w("Main", "new positionX -> $positionX")
         positionY += speedY
         if (positionY > params.parentHeight) {
             if (shouldRecycleFalling) {
@@ -94,7 +95,7 @@ internal class Snowflake(val params: Params) {
 
     fun draw(canvas: Canvas) {
         if (bitmap != null) {
-            canvas.drawBitmap(bitmap, positionX.toFloat(), positionY.toFloat(), paint)
+            canvas.drawBitmap(bitmap!!, positionX.toFloat(), positionY.toFloat(), paint)
         } else {
             canvas.drawCircle(positionX.toFloat(), positionY.toFloat(), size.toFloat(), paint)
         }

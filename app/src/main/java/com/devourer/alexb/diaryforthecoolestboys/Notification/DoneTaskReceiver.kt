@@ -48,7 +48,7 @@ class DoneTaskReceiver : BroadcastReceiver() {
         realm = Realm.getDefaultInstance()
         data = MyData()
         data.title = title
-        fire = MyFirebase(context!!, data)
+        fire = MyFirebase(context!!, data, realm)
         date = Date()
 
         val task = realm
@@ -59,14 +59,13 @@ class DoneTaskReceiver : BroadcastReceiver() {
 
         cancelNotification(context, task?.notificationId as Int)
 
-        fire.addTaskToCompleted(task.id, date)
+        fire.addTaskToCompleted(task.id, date, true)
 
         val completedTask = CompletedTask(task, date)
         realm.executeTransaction {
             it.insert(completedTask)
             task.deleteFromRealm()
         }
-        realm.close()
 
         val doneIntent = Intent("notification")
         doneIntent.putExtra("id", id)

@@ -33,7 +33,6 @@ class CompletedTasksRecyclerViewAdapter(
     companion object {
         private const val TAG: String = "Main"
     }
-    private var isExpanded = false
     private var mCompletedTasks = ArrayList<CompletedTask>()
     private var fire: MyFirebase
     private var data: MyData
@@ -122,9 +121,6 @@ class CompletedTasksRecyclerViewAdapter(
 
     }
 
-    fun onCompletedBtn(){
-        isExpanded = !isExpanded
-    }
 
     fun addTask(task: Task, completionDate: Date){
         val completedTask = CompletedTask(task, completionDate)
@@ -164,8 +160,6 @@ class CompletedTasksRecyclerViewAdapter(
             deletedTask!!.deleteFromRealm()
             it.insert(task)
         }
-        if (mCompletedTasks.isEmpty())
-            isExpanded = false
         fire.addTaskToNotCompleted(task.map(),task.id)
 
     }

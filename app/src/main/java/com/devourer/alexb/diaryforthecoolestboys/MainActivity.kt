@@ -70,6 +70,7 @@ class MainActivity : AppCompatActivity() {
     private var isAdd: Boolean = true
     private var isChange: Boolean = false
     private var isCompleted: Boolean = false
+    private var isAlreadyChecking: Boolean = false
     var isDeleteTaskOrList = false // false — task | true — list
     private var isCompletedListGroupExpanded = false
     private val handler = Handler()
@@ -79,6 +80,7 @@ class MainActivity : AppCompatActivity() {
     var mTaskLists = ArrayList<TaskList>()
     lateinit var taskListGroupAdapter: TasksRecyclerViewAdapter
     lateinit var completedTasksListGroupAdapter: CompletedTasksRecyclerViewAdapter
+
     companion object {
         private const val TAG: String = "Main"
         const val INTENT_ID = "auth"
@@ -88,7 +90,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.w(TAG,"onCreate")
+        Log.w(TAG, "onCreate")
         setContentView(R.layout.activity_main)
         setSupportActionBar(bar)
         ///////////////////
@@ -108,6 +110,7 @@ class MainActivity : AppCompatActivity() {
         initTasksList()
         onNavItemSelected(false)
         ///////////////////////
+        LocalBroadcastManager.getInstance(this).registerReceiver(mNotificationReceiver, IntentFilter("notification"))
 
 
         fab.setOnClickListener {
@@ -122,13 +125,14 @@ class MainActivity : AppCompatActivity() {
             chipDateOnChecked(isChecked)
         }
 
-        taskDetailsEditText.addTextChangedListener(object : TextWatcher{
+        taskDetailsEditText.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {}
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                editScrollView.scrollBy(0,100)
+                editScrollView.scrollBy(0, 100)
             }
+
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                editScrollView.scrollBy(0,100)
+                editScrollView.scrollBy(0, 100)
             }
         })
 
@@ -152,12 +156,20 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun getIntentsExtras(){
-        if (intent.getBooleanExtra(INTENT_ID,false))
-            snacks.snack("Authentication access!",Snackbar.LENGTH_LONG,R.color.colorBackSnackbar,"OK",R.color.colorOkActionSnackbar)
-        if (intent.hasExtra(INTENT_ADD_LIST_ID))
+    private fun getIntentsExtras() {
+        if (intent.getBooleanExtra(INTENT_ID, false))
+            snacks.snack(
+                "Authentication access!",
+                Snackbar.LENGTH_LONG,
+                R.color.colorBackSnackbar,
+                "OK",
+                R.color.colorOkActionSnackbar
+            )
+        if (intent.hasExtra(INTENT_ADD_LIST_ID)) {
             data = intent.getParcelableExtra(INTENT_ADD_LIST_ID)
-        if (intent.getBooleanExtra("notification", false)){
+            fire = MyFirebase(this, data, realm)
+        }
+        if (intent.getBooleanExtra("notification", false)) {
             data.title = intent.getStringExtra("title")
             val id = intent.getIntExtra("id", -1)
             val task = realm
@@ -190,7 +202,6 @@ class MainActivity : AppCompatActivity() {
         Log.w(TAG, "onResume")
         super.onResume()
         checkGUID()
-        LocalBroadcastManager.getInstance(this).registerReceiver(mNotificationReceiver, IntentFilter("notification"))
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mPreferencesReciever)
     }
 
@@ -204,6 +215,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         Log.w(TAG, "onDestroy")
         super.onDestroy()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mNotificationReceiver)
         realm.close()
     }
 
@@ -220,18 +232,18 @@ class MainActivity : AppCompatActivity() {
     private fun updateUI(user: FirebaseUser?) {
         when (user) {
             null -> {
-                val intent = Intent(this,LoginActivity::class.java)
+                val intent = Intent(this, LoginActivity::class.java)
                 startActivity(intent)
                 finish()
             }
         }
     }
 
-    private fun fabOnClick(){
+    private fun fabOnClick() {
         slideBarUp()
         when {
             !isChange -> {
-                Log.w(TAG,"Вутри условия !isChange слушателя ФАБа")
+                Log.w(TAG, "Вутри условия !isChange слушателя ФАБа")
                 taskListGroupAdapter.addTask(
                     isAdd,
                     taskEditText.text.toString(),
@@ -243,7 +255,7 @@ class MainActivity : AppCompatActivity() {
                 updateBarUI(isAdd)
             }
             isChange -> {
-                Log.w(TAG,"Вутри условия isChange слушателя ФАБа")
+                Log.w(TAG, "Вутри условия isChange слушателя ФАБа")
                 if (!isCompleted) {
                     taskListGroupAdapter.changeTask(
                         taskEditText.text.toString(),
@@ -261,12 +273,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun changeListOnClick(){
+    private fun changeListOnClick() {
         val changeListBottomNavigationDrawerFragment = ChangeListBottomNavigationDrawerFragment()
-        changeListBottomNavigationDrawerFragment.show(supportFragmentManager,changeListBottomNavigationDrawerFragment.tag)
+        changeListBottomNavigationDrawerFragment.show(
+            supportFragmentManager,
+            changeListBottomNavigationDrawerFragment.tag
+        )
     }
 
-    private fun chipDateOnChecked(isChecked: Boolean){
+    private fun chipDateOnChecked(isChecked: Boolean) {
         when {
             (isChecked && !isAdd) -> {
                 Thread(Runnable {
@@ -278,7 +293,10 @@ class MainActivity : AppCompatActivity() {
                     TimeUnit.MILLISECONDS.sleep(200)
                     handler.post {
                         val datePickerBottomNavigationDrawerFragment = DatePickerBottomNavigationDrawerFragment()
-                        datePickerBottomNavigationDrawerFragment.show(supportFragmentManager,DatePickerBottomNavigationDrawerFragment().tag)
+                        datePickerBottomNavigationDrawerFragment.show(
+                            supportFragmentManager,
+                            DatePickerBottomNavigationDrawerFragment().tag
+                        )
                     }
                 }).start()
 
@@ -287,7 +305,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun chipDetailsOnChecked(isChecked: Boolean){
+    private fun chipDetailsOnChecked(isChecked: Boolean) {
         when {
             (isChecked && !isAdd) -> {
                 taskDetailsEditTextInputLayout.visibility = View.VISIBLE
@@ -308,23 +326,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun onRefresh(){
+    private fun onRefresh() {
         onNavItemSelected(true)
         refreshLayout.isRefreshing = false
     }
 
-    private fun contentOnScroll(scrollY: Int, oldScrollY: Int){
-        if (isBarAnimateEnd){
-            when{
+    private fun contentOnScroll(scrollY: Int, oldScrollY: Int) {
+        if (isBarAnimateEnd) {
+            when {
                 scrollY > oldScrollY -> slideBarDown()
                 scrollY < oldScrollY -> slideBarUp()
             }
         }
     }
 
-    private fun editOnScroll(scrollY: Int, oldScrollY: Int){
-        if (isBarAnimateEnd){
-            when{
+    private fun editOnScroll(scrollY: Int, oldScrollY: Int) {
+        if (isBarAnimateEnd) {
+            when {
                 scrollY > oldScrollY -> slideBarDown()
                 scrollY < oldScrollY -> slideBarUp()
             }
@@ -333,15 +351,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         val inflater = menuInflater
-        inflater.inflate(R.menu.main_menu,menu)
+        inflater.inflate(R.menu.main_menu, menu)
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
-        when(item!!.itemId){
+        when (item!!.itemId) {
             R.id.menu -> {
                 val settingsBottomNavigationDrawerFragment = SettingsBottomNavigationDrawerFragment()
-                settingsBottomNavigationDrawerFragment.show(supportFragmentManager,settingsBottomNavigationDrawerFragment.tag)
+                settingsBottomNavigationDrawerFragment.show(
+                    supportFragmentManager,
+                    settingsBottomNavigationDrawerFragment.tag
+                )
             }
             R.id.back -> updateBarUI(false)
             R.id.back_ -> {
@@ -358,13 +379,19 @@ class MainActivity : AppCompatActivity() {
                             .setSubtitle("")
                             .setDescription("Are you want to delete this task?")
                             .setNegativeButton("Cancel")
-                            .show(mFragmentManager,authCallback)
+                            .show(mFragmentManager, authCallback)
                     }
                     else -> {
-                        isChange = false
-                        when{
-                            !isCompleted -> { taskListGroupAdapter.deleteTask(data.position,snacks) }
-                            isCompleted -> { completedTasksListGroupAdapter.deleteCompletedTask(data.position, showCompletionBtnWhenDeleted) }
+                        when(isCompleted){
+                            false -> {
+                                taskListGroupAdapter.deleteTask(data.position, snacks)
+                            }
+                            true -> {
+                                completedTasksListGroupAdapter.deleteCompletedTask(
+                                    data.position,
+                                    showCompletionBtnWhenDeleted
+                                )
+                            }
                         }
                         updateBarUI(false)
                     }
@@ -372,30 +399,30 @@ class MainActivity : AppCompatActivity() {
             }
             android.R.id.home -> {
                 val bottomNavigationDrawerFragment = BottomNavigationDrawerFragment()
-                bottomNavigationDrawerFragment.show(supportFragmentManager,bottomNavigationDrawerFragment.tag)
+                bottomNavigationDrawerFragment.show(supportFragmentManager, bottomNavigationDrawerFragment.tag)
             }
         }
         return true
     }
 
-    private fun setUiAlpha(b: Boolean){
-        when (b){
+    private fun setUiAlpha(b: Boolean) {
+        when (b) {
             true -> {
-                headerView.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                headerView.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator?) {
                         super.onAnimationEnd(animation)
                         headerView.alpha = 0f
                         headerView.visibility = View.GONE
                     }
                 })
-                headerLineView.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                headerLineView.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator?) {
                         super.onAnimationEnd(animation)
                         headerLineView.alpha = 0f
                         headerLineView.visibility = View.GONE
                     }
                 })
-                refreshLayout.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                refreshLayout.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator?) {
                         super.onAnimationEnd(animation)
                         refreshLayout.alpha = 0f
@@ -406,17 +433,18 @@ class MainActivity : AppCompatActivity() {
                     TimeUnit.MILLISECONDS.sleep(150)
                     handler.post {
                         editScrollView.visibility = View.VISIBLE
-                        editScrollView.animate().alpha(1f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
-                            override fun onAnimationEnd(animation: Animator?) {
-                                super.onAnimationEnd(animation)
-                                editScrollView.alpha = 1f
-                            }
-                        })
+                        editScrollView.animate().alpha(1f).setDuration(150)
+                            .setListener(object : AnimatorListenerAdapter() {
+                                override fun onAnimationEnd(animation: Animator?) {
+                                    super.onAnimationEnd(animation)
+                                    editScrollView.alpha = 1f
+                                }
+                            })
                     }
                 }).start()
             }
             false -> {
-                editScrollView.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                editScrollView.animate().alpha(0f).setDuration(150).setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator?) {
                         super.onAnimationEnd(animation)
                         editScrollView.alpha = 0f
@@ -427,26 +455,28 @@ class MainActivity : AppCompatActivity() {
                     TimeUnit.MILLISECONDS.sleep(150)
                     handler.post {
                         headerView.visibility = View.VISIBLE
-                        headerView.animate().alpha(1f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
+                        headerView.animate().alpha(1f).setDuration(150).setListener(object : AnimatorListenerAdapter() {
                             override fun onAnimationEnd(animation: Animator?) {
                                 super.onAnimationEnd(animation)
                                 headerView.alpha = 1f
                             }
                         })
                         headerLineView.visibility = View.VISIBLE
-                        headerLineView.animate().alpha(1f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
-                            override fun onAnimationEnd(animation: Animator?) {
-                                super.onAnimationEnd(animation)
-                                headerLineView.alpha = 1f
-                            }
-                        })
+                        headerLineView.animate().alpha(1f).setDuration(150)
+                            .setListener(object : AnimatorListenerAdapter() {
+                                override fun onAnimationEnd(animation: Animator?) {
+                                    super.onAnimationEnd(animation)
+                                    headerLineView.alpha = 1f
+                                }
+                            })
                         refreshLayout.visibility = View.VISIBLE
-                        refreshLayout.animate().alpha(1f).setDuration(150).setListener(object : AnimatorListenerAdapter(){
-                            override fun onAnimationEnd(animation: Animator?) {
-                                super.onAnimationEnd(animation)
-                                refreshLayout.alpha = 1f
-                            }
-                        })
+                        refreshLayout.animate().alpha(1f).setDuration(150)
+                            .setListener(object : AnimatorListenerAdapter() {
+                                override fun onAnimationEnd(animation: Animator?) {
+                                    super.onAnimationEnd(animation)
+                                    refreshLayout.alpha = 1f
+                                }
+                            })
                     }
                 }).start()
             }
@@ -454,7 +484,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    fun updateBarUI(b:Boolean){
+    fun updateBarUI(b: Boolean) {
         when (b) {
             true -> {
                 progressBarMain.cancelAnimation()
@@ -466,7 +496,7 @@ class MainActivity : AppCompatActivity() {
                 bar.navigationIcon = null
                 bar.replaceMenu(R.menu.empty_menu)
                 Thread(Runnable {
-                    handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END}
+                    handler.post { bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END }
                     TimeUnit.MILLISECONDS.sleep(300)
                     handler.post {
                         taskEditText.requestFocus()
@@ -478,7 +508,7 @@ class MainActivity : AppCompatActivity() {
                 isAdd = false
             }
             false -> {
-                if (isCompleted){
+                if (isCompleted) {
                     taskEditText.isEnabled = true
                     taskDetailsEditText.isEnabled = true
                     taskEditText.paintFlags = 1282 // Standard
@@ -493,7 +523,7 @@ class MainActivity : AppCompatActivity() {
                 icon.start()
                 bar.replaceMenu(R.menu.empty_menu)
                 Thread(Runnable {
-                    handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_CENTER}
+                    handler.post { bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_CENTER }
                     TimeUnit.MILLISECONDS.sleep(300)
                     handler.post {
                         bar.replaceMenu(R.menu.main_menu)
@@ -516,19 +546,20 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun updateUIWhenTaskTextIsClicked(taskText: String?, taskDetailsText: String?, _notificationDate: Any?){
+    private fun updateUIWhenTaskTextIsClicked(taskText: String?, taskDetailsText: String?, _notificationDate: Any?) {
         changeTaskListBtn.visibility = View.VISIBLE
         changeTaskListBtn.text = data.title
         taskEditText.setText(taskText)
         val dateFormat = SimpleDateFormat("yyyy MMMM dd, h:mm a")
-        val notificationDate = if (_notificationDate != null) dateFormat.format((_notificationDate as Date).time) else ""
-        if (!taskDetailsText.isNullOrBlank()){
+        val notificationDate =
+            if (_notificationDate != null) dateFormat.format((_notificationDate as Date).time) else ""
+        if (!taskDetailsText.isNullOrBlank()) {
             chipAddDetails.isChecked = true
             taskDetailsEditTextInputLayout.visibility = View.VISIBLE
             taskDetailsEditText.setText(taskDetailsText)
             taskEditText.requestFocus()
         }
-        if (!notificationDate.isNullOrBlank()){
+        if (!notificationDate.isNullOrBlank()) {
             chipAddDate.isChecked = true
             chipAddDate.text = notificationDate
         }
@@ -539,14 +570,14 @@ class MainActivity : AppCompatActivity() {
         icon.start()
         bar.replaceMenu(R.menu.empty_menu)
         Thread(Runnable {
-            handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END}
+            handler.post { bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END }
             TimeUnit.MILLISECONDS.sleep(300)
             handler.post { bar.replaceMenu(R.menu.edit_task_menu) }
         }).start()
         isAdd = false
     }
 
-    fun updateUIWhenCompletedTaskTextIsClicked(taskText: String?, taskDetailsText: String?, _notificationDate: Date?){
+    fun updateUIWhenCompletedTaskTextIsClicked(taskText: String?, taskDetailsText: String?, _notificationDate: Date?) {
         //Log.w(TAG,"paintFlags -> ${taskEditText.paintFlags}")
         taskEditText.paintFlags = Paint.STRIKE_THRU_TEXT_FLAG
         //Log.w(TAG,"paintFlags! -> ${taskEditText.paintFlags}")
@@ -557,17 +588,17 @@ class MainActivity : AppCompatActivity() {
         taskEditText.requestFocus()
         val dateFormat = SimpleDateFormat("yyyy MMMM dd, h:mm a")
         val notificationDate = if (_notificationDate != null) dateFormat.format((_notificationDate).time) else ""
-        if (!taskDetailsText.isNullOrBlank()){
+        if (!taskDetailsText.isNullOrBlank()) {
             chipAddDetails.isChecked = true
             taskDetailsEditTextInputLayout.visibility = View.VISIBLE
-            Log.w(TAG,"paintFlags1 -> ${taskDetailsEditText.paintFlags}")
+            Log.w(TAG, "paintFlags1 -> ${taskDetailsEditText.paintFlags}")
             taskDetailsEditText.paintFlags = Paint.STRIKE_THRU_TEXT_FLAG
-            Log.w(TAG,"paintFlags1! -> ${taskDetailsEditText.paintFlags}")
+            Log.w(TAG, "paintFlags1! -> ${taskDetailsEditText.paintFlags}")
             taskDetailsEditText.isEnabled = false
             taskDetailsEditText.setText(taskDetailsText)
             taskEditText.requestFocus()
         }
-        if (!notificationDate.isNullOrBlank()){
+        if (!notificationDate.isNullOrBlank()) {
             chipAddDate.isChecked = true
             chipAddDate.text = notificationDate
         }
@@ -578,7 +609,7 @@ class MainActivity : AppCompatActivity() {
         icon.start()
         bar.replaceMenu(R.menu.empty_menu)
         Thread(Runnable {
-            handler.post {bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END}
+            handler.post { bar.fabAlignmentMode = BottomAppBar.FAB_ALIGNMENT_MODE_END }
             TimeUnit.MILLISECONDS.sleep(300)
             handler.post { bar.replaceMenu(R.menu.edit_task_menu) }
         }).start()
@@ -586,7 +617,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    fun onNavItemSelected(isSync: Boolean){
+    fun onNavItemSelected(isSync: Boolean) {
         progressBarMain.visibility = View.VISIBLE
         progressBarMain.playAnimation()
         completedBtnLayout.visibility = View.GONE
@@ -594,13 +625,13 @@ class MainActivity : AppCompatActivity() {
         completedTasksListGroup.visibility = View.GONE
         isCompletedListGroupExpanded = false
         list_name_text.text = data.title
-        when (isSync){
+        when (isSync) {
             false -> initTasks()
             true -> initAllFirebaseTasks()
         }
     }
 
-    private fun initTasksList(){
+    private fun initTasksList() {
         mTaskLists.clear()
 
         val taskLists = realm
@@ -613,19 +644,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun createNewTasksList(){
-        val intent = Intent(this,AddTasksListActivity::class.java)
+    fun createNewTasksList() {
+        val intent = Intent(this, AddTasksListActivity::class.java)
         intent.putExtra(INTENT_ADD_LIST_ID, data)
         startActivity(intent)
     }
 
-    fun showStatistics(){
+    fun showStatistics() {
         val intent = Intent(this, StatisticsActivity::class.java)
         intent.putExtra(INTENT_STATISTICS_ID, R.id.my_tasks_list)
         startActivity(intent)
     }
 
-    fun deleteTaskList(){
+    fun deleteTaskList() {
         if (data.title != "My Tasks") {
             val title = data.title
             val taskList = realm
@@ -641,7 +672,7 @@ class MainActivity : AppCompatActivity() {
                 .`in`("listTitle", arrayOf(title))
                 .findAll()
 
-            realm.executeTransaction{
+            realm.executeTransaction {
                 taskList!!.deleteFromRealm()
                 tasks.deleteAllFromRealm()
                 completedTask.deleteAllFromRealm()
@@ -654,42 +685,62 @@ class MainActivity : AppCompatActivity() {
             snacks.snack("List removed", Snackbar.LENGTH_LONG, R.color.colorBackSnackbar)
             initTasksList()
             onNavItemSelected(false)
-        }
-        else
-            snacks.snack("You can't delete main list, I don't want it! ^—^", Snackbar.LENGTH_LONG, R.color.colorBackSnackbar)
+        } else
+            snacks.snack(
+                "You can't delete main list, I don't want it! ^—^",
+                Snackbar.LENGTH_LONG,
+                R.color.colorBackSnackbar
+            )
     }
 
-    private fun checkGUID(){
-        if (fire.uId == fire.uIdDoc.id) {
-            fire.uIdDoc.get().addOnCompleteListener {
-                if (it.isSuccessful) {
-                    val fGuid = it.result?.get("guid")
-                    Log.w(TAG, "checkGUID | guid -> $fGuid")
-                    if (fGuid == null) {
-                        val newGuid = fire.changeGUID()
-                        if (realm.where<GUID>().findAll().isEmpty()) {
-                            realm.executeTransaction { r ->
-                                r.delete(GUID::class.java)
-                                r.insert(GUID(newGuid))
+    private fun checkGUID() {
+        if (!isAlreadyChecking) {
+            isAlreadyChecking = true
+            if (fire.uId == fire.uIdDoc.id) {
+                fire.uIdDoc.get().addOnCompleteListener {
+                    if (it.isSuccessful) {
+                        val fGuid = it.result?.get("guid")
+                        Log.w(TAG, "checkGUID | fGuid -> $fGuid")
+                        if (fGuid == null) {
+                            fire.changeGUID()
+                            if (!isCompletedListGroupExpanded)
+                                showCompletedBtn()
+                        }
+                        else {
+                            val rGuid = realm
+                                .where<GUID>()
+                                .findFirst()
+                            Log.w(TAG, "checkGUID | rGuid -> ${rGuid?.guid}")
+                            if (rGuid?.guid != fGuid) {
+                                onNavItemSelected(true)
+                                realm.executeTransaction {r ->
+                                    if (rGuid != null)
+                                        rGuid.guid = fGuid as String
+                                    else
+                                        r.insert(GUID(fGuid as String))
+                                }
+                            } else {
+                                isAlreadyChecking = false
+                                progressBarMain.cancelAnimation()
+                                progressBarMain.visibility = View.GONE
+                                if (!isCompletedListGroupExpanded)
+                                    showCompletedBtn()
                             }
+
                         }
                     } else {
-                        val rGuid = realm
-                            .where<GUID>()
-                            .findFirst()
-                        if (rGuid?.guid != fGuid) {
-                            onNavItemSelected(true)
-                            realm.executeTransaction {
-                                rGuid?.guid = fGuid as String
-                            }
-                        }
+                        isAlreadyChecking = false
+                        progressBarMain.cancelAnimation()
+                        progressBarMain.visibility = View.GONE
+                        if (!isCompletedListGroupExpanded)
+                            showCompletedBtn()
                     }
                 }
             }
         }
     }
 
-    private fun initTasks(){
+    private fun initTasks() {
         Log.w(TAG, "initTasks")
         val title = data.title
         list_name_text.text = title
@@ -698,10 +749,9 @@ class MainActivity : AppCompatActivity() {
         mCompletedTasks.clear()
         ////////////////////
         Log.w(TAG, "Список очищен")
-        if (realm.where<Task>().findAll().isEmpty() && realm.where<CompletedTask>().findAll().isEmpty()){
-            onNavItemSelected(true)
-        }
-        else {
+        if (realm.where<Task>().findAll().isEmpty() && realm.where<CompletedTask>().findAll().isEmpty()) {
+            checkGUID()
+        } else {
             val sortedTasks = realm
                 .where<Task>()
                 .sort(Task::dateOfTasks.name, Sort.DESCENDING)
@@ -718,11 +768,12 @@ class MainActivity : AppCompatActivity() {
                 "sortedTasks.size -> ${sortedTasks.size} | sortedCompletedTasks.size -> ${sortedCompletedTasks.size}"
             )
             sortedTasks.forEach {
-                mTasks.add(it)
+                mTasks.add(Task(it))
             }
             sortedCompletedTasks.forEach {
-                mCompletedTasks.add(it)
+                mCompletedTasks.add(CompletedTask(it))
             }
+
             Log.w(TAG, "mTasks.size -> ${mTasks.size} | mCompletedTasks.size -> ${mCompletedTasks.size}")
             progressBarMain.cancelAnimation()
             progressBarMain.visibility = View.GONE
@@ -772,15 +823,16 @@ class MainActivity : AppCompatActivity() {
 
 
             for (list in 0 until tasksList.size) {
-                fire.uIdDoc.collection(tasksList[list]).orderBy("date", Query.Direction.DESCENDING).get()
+                fire.uIdDoc.collection(tasksList[list])
+                    .orderBy("date", Query.Direction.DESCENDING)
+                    .get()
                     .addOnCompleteListener {
                         if (it.isSuccessful) {
                             Log.w(TAG, "it is successful order by date")
                             for ((i) in (0 until it.result!!.size()).withIndex()) {
                                 val doc = it.result!!.documents[i]
+                                //Log.w(TAG,"notification_date TYPE -> ${test!!::class.simpleName}")
                                 if (doc.get("key") == false) {
-                                    //Log.w(TAG,"Внутри условия при key == false")
-                                    //Log.w(TAG,"notification_date TYPE -> ${test!!::class.simpleName}")
                                     val task = Task(
                                         doc.get("text") as String,
                                         doc.get("details_text") as String,
@@ -791,7 +843,7 @@ class MainActivity : AppCompatActivity() {
                                         (doc.get("notification_id") as Long?)?.toInt()
                                     )
                                     if (tasksList[list] == title)
-                                        mTasks.add(task)
+                                        mTasks.add(Task(task))
                                     realm.executeTransaction { r ->
                                         r.insert(task)
                                     }
@@ -800,54 +852,85 @@ class MainActivity : AppCompatActivity() {
                             }
 
                             fire.uIdDoc.collection(tasksList[list])
-                                .orderBy("completion_date", Query.Direction.DESCENDING).get().addOnCompleteListener {
-                                if (it.isSuccessful) {
-                                    Log.w(TAG, "it is successful order by completion_date")
-                                    for ((i) in (0 until it.result!!.size()).withIndex()) {
-                                        //Log.w(TAG,"initAllFirebaseTasks | Внутри for")
-                                        val doc = it.result!!.documents[i]
-                                        if (doc.get("key") == true) {
-                                            //Log.w(TAG,"Внутри условия при key == true")
-                                            val completedTask = CompletedTask(
-                                                doc.get("text") as String,
-                                                doc.get("details_text") as String,
-                                                doc.get("date"),
-                                                doc.get("completion_date"),
-                                                doc.get("notification_date"),
-                                                doc.id,
-                                                tasksList[list]
-                                            )
-                                            if (tasksList[list] == title)
-                                                mCompletedTasks.add(completedTask)
-                                            realm.executeTransaction { r ->
-                                                r.insert(completedTask)
+                                .orderBy("completion_date", Query.Direction.DESCENDING)
+                                .get()
+                                .addOnCompleteListener {
+                                    if (it.isSuccessful) {
+                                        Log.w(TAG, "it is successful order by completion_date")
+                                        for ((i) in (0 until it.result!!.size()).withIndex()) {
+                                            val doc = it.result!!.documents[i]
+                                            if (doc.get("key") == true) {
+                                                val completedTask = CompletedTask(
+                                                    doc.get("text") as String,
+                                                    doc.get("details_text") as String,
+                                                    doc.get("date"),
+                                                    doc.get("completion_date"),
+                                                    doc.get("notification_date"),
+                                                    doc.id,
+                                                    tasksList[list]
+                                                )
+                                                if (tasksList[list] == title)
+                                                    mCompletedTasks.add(CompletedTask(completedTask))
+                                                realm.executeTransaction { r ->
+                                                    r.insert(completedTask)
+                                                }
+                                                //Log.w(TAG,"mCompletedTasks[i] -> ${mCompletedTasks[i]}")
                                             }
-                                            //Log.w(TAG,"mCompletedTasks[i] -> ${mCompletedTasks[i]}")
                                         }
-                                    }
-                                    when (list) {
-                                        tasksList.size - 1 -> {
-                                            Log.w(
-                                                TAG, "realm task -> ${realm.where<Task>().findAll().size} " +
-                                                        "| realm completed -> ${realm.where<CompletedTask>().findAll().size}"
-                                            )
-                                            progressBarMain.cancelAnimation()
-                                            progressBarMain.visibility = View.GONE
-                                            completedTasksListGroupAdapter.notifyDataSetChanged()
-                                            Log.w(TAG, "Обновление адаптера completedTaskList при инициализации таскс")
-                                            taskListGroupAdapter.notifyDataSetChanged()
-                                            Log.w(TAG, "Обновление адаптера taskList при инициализации таскс")
-                                            showCompletedBtn()
+                                        if (!isAlreadyChecking && (fire.uId == fire.uIdDoc.id)) {
+                                            fire.uIdDoc.get().addOnCompleteListener {
+                                                if (it.isSuccessful) {
+                                                    val fGuid = it.result?.get("guid")
+                                                    if (fGuid != null) {
+                                                        val rGuid = realm
+                                                            .where<GUID>()
+                                                            .findFirst()
+                                                        realm.executeTransaction {r ->
+                                                            if (rGuid != null)
+                                                                rGuid.guid = fGuid as String
+                                                            else
+                                                                r.insert(GUID(fGuid as String))
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
-                                    }
+                                        when (list) {
+                                            tasksList.size - 1 -> {
+                                                Log.w(
+                                                    TAG,
+                                                    "realm task -> ${realm.where<Task>().findAll().size} " +
+                                                            "| realm completed -> ${realm.where<CompletedTask>().findAll().size}"
+                                                )
+                                                progressBarMain.cancelAnimation()
+                                                progressBarMain.visibility = View.GONE
+                                                completedTasksListGroupAdapter.notifyDataSetChanged()
+                                                Log.w(
+                                                    TAG,
+                                                    "Обновление адаптера completedTaskList при инициализации таскс"
+                                                )
+                                                taskListGroupAdapter.notifyDataSetChanged()
+                                                Log.w(
+                                                    TAG,
+                                                    "Обновление адаптера taskList при инициализации таскс"
+                                                )
+                                                showCompletedBtn()
+                                                isAlreadyChecking = false
+                                            }
+                                        }
 
 
-                                } else {
-                                    Log.w(TAG, "ERROR initAllFirebaseTasks (by completion_date)  -> ${it.exception}")
+                                    } else {
+                                        isAlreadyChecking = false
+                                        Log.w(
+                                            TAG,
+                                            "ERROR initAllFirebaseTasks (by completion_date)  -> ${it.exception}"
+                                        )
+                                    }
+
                                 }
-
-                            }
                         } else {
+                            isAlreadyChecking = false
                             Log.w(TAG, "ERROR initAllFirebaseTasks (by date) -> ${it.exception}")
                             progressBarMain.cancelAnimation()
                             progressBarMain.visibility = View.GONE
@@ -861,7 +944,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
             }
-
         }
     }
 
@@ -916,6 +998,7 @@ class MainActivity : AppCompatActivity() {
         tasksListGroup.apply {
             itemAnimator = SlideInDownAnimator(OvershootInterpolator())
             layoutManager = LinearLayoutManager(this@MainActivity)
+            setHasFixedSize(false)
         }
         tasksListGroup.adapter = AlphaInAnimationAdapter(taskListGroupAdapter).apply {
             setDuration(500)
@@ -974,6 +1057,7 @@ class MainActivity : AppCompatActivity() {
         completedTasksListGroup.apply {
             itemAnimator = LandingAnimator()
             layoutManager = LinearLayoutManager(this@MainActivity)
+            setHasFixedSize(false)
         }
         completedTasksListGroup.adapter = AlphaInAnimationAdapter(completedTasksListGroupAdapter).apply {
             setDuration(500)
@@ -1065,7 +1149,6 @@ class MainActivity : AppCompatActivity() {
                 val icon = completedBtn.icon as AnimatedVectorDrawable
                 icon.start()
                 Thread(Runnable {
-                    completedTasksListGroupAdapter.onCompletedBtn()
                     handler.post {
                         completedTasksListGroup.animate().alpha(1f).setDuration(300).setListener(object : AnimatorListenerAdapter(){
                             override fun onAnimationEnd(animation: Animator?) {
@@ -1094,7 +1177,6 @@ class MainActivity : AppCompatActivity() {
                 icon.start()
                 Thread(Runnable {
                     handler.post {
-                        completedTasksListGroupAdapter.onCompletedBtn()
                         completedTasksListGroup.animate().alpha(0f).setDuration(300).setListener(object : AnimatorListenerAdapter(){
                             override fun onAnimationEnd(animation: Animator?) {
                                 super.onAnimationEnd(animation)
@@ -1490,6 +1572,7 @@ class MainActivity : AppCompatActivity() {
                 val id: String? = intent.getStringExtra("id")
                 val task: CompletedTask? = intent.getParcelableExtra("task")
                 if (id != null && task != null) {
+                    Log.w(TAG, "id -> $id")
                     taskListGroupAdapter.deleteTaskAfterNotificationDone(id)
                     completedTasksListGroupAdapter.addTaskAfterNotificationDone(task)
                     showCompletedBtnWhenTaskMoved()

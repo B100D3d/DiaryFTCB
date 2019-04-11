@@ -22,7 +22,7 @@ class NotificationUtils {
     private var taskText: String = ""
     private var taskDetails: String = ""
 
-    fun setNotification(task: Task, title: String,time: Long, activity: Activity){
+    fun setNotification(task: Task, title: String, time: Long, activity: Activity){
         Log.w(TAG, "setNotification | CurrentTime -> ${Calendar.getInstance().timeInMillis} | nTime -> $time")
         if (time > 0){
 

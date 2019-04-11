@@ -42,8 +42,8 @@ class AddTasksListActivity : AppCompatActivity() {
         setContentView(R.layout.activity_add_tasks_list)
         setupSharedPreferences()
         data = intent.getParcelableExtra(INTENT_ADD_LIST_ID)
-        fire = MyFirebase(this,data)
         realm = Realm.getDefaultInstance()
+        fire = MyFirebase(this,data, realm)
 
         val lists = realm
             .where<TaskList>()
@@ -69,7 +69,7 @@ class AddTasksListActivity : AppCompatActivity() {
 
         addTaskListDoneBtn.setOnClickListener {
             when {
-                (addTaskListEditText.text!!.length > 47) -> Thread(Runnable {
+                (addTaskListEditText.text!!.length > 39) -> Thread(Runnable {
                     val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                     var view = currentFocus
                     if (view == null)
@@ -78,7 +78,7 @@ class AddTasksListActivity : AppCompatActivity() {
                     TimeUnit.MILLISECONDS.sleep(300)
                     handler.post {snack("Too many characters in the title!", Snackbar.LENGTH_SHORT, R.color.colorBackSnackbar)}
                 }).start()
-                (addTaskListEditText.text.isNullOrEmpty()) -> hideKeyboard()
+                (addTaskListEditText.text.isNullOrEmpty()) -> { }
                 (addTaskListEditText.text!!.contains(".")) -> {
                     val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                     var view = currentFocus

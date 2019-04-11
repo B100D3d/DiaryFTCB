@@ -4,7 +4,6 @@
     <color name="colorPrimaryDark">#000000</color>
     <color name="colorAccent">#7c4dff</color>
     <color name="colorBottomAppBar">#101010</color>
-    <color name="colorLoginStatusBar">#201e28</color>
     <color name="colorMain">#201e28</color>
     <color name="colorNavBar">#1a191e</color>
     <color name="colorCheckedItemText">#5f26ff</color>

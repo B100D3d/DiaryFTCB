@@ -85,7 +85,7 @@ class MyFirebase (context: Context, _data: MyData){
         }
     }
 
-    fun addTaskToCompleted(id: String?, completionDate: Any?){
+    fun addTaskToCompleted(id: String?, completionDate: Any?, closeRealm: Boolean = false){
 
         uIdDoc.collection(data.title).document(id!!).update(
             mapOf(
@@ -95,7 +95,7 @@ class MyFirebase (context: Context, _data: MyData){
         ).addOnCompleteListener {
             if (it.isSuccessful){
                 Log.w(TAG, "Добавление таски в список завершённых successful")
-                changeGUID()
+                changeGUID(closeRealm)
             }
         }
 
@@ -153,8 +153,9 @@ class MyFirebase (context: Context, _data: MyData){
         }
     }
 
-    fun changeGUID() : String{
+    fun changeGUID(closeRealm: Boolean = false) : String{
         val newGuid = uIdDoc.collection("#$!@#$!@!@#$!@#!3123!@#").document().id
+        Log.w(TAG, "newGuid -> $newGuid")
         uIdDoc.set(mapOf(
             "guid" to newGuid
         ))
@@ -166,6 +167,8 @@ class MyFirebase (context: Context, _data: MyData){
                 rGuid?.guid = newGuid
             }
         }
+        if (closeRealm)
+            realm.close()
 
         return newGuid
     }
